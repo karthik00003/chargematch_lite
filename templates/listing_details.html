@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_macros.html" import charger_status, review_buttons %}
+{% block title %}{{ st.name }} · ChargeMatch Lite{% endblock %}
+{% block content %}
+{% if not public %}
+  <div class="flash error">{% if st.host_status == 'DISABLED' %}The host account is disabled{% else %}No charger here is approved and in service yet{% endif %}: customers can't see it. You are viewing it as {{ 'its host' if user.role == 'HOST' else 'an admin' }}.</div>
+{% endif %}
+<p class="crumbs"><a href="{{ request.referrer if request.referrer and request.host in request.referrer else url_for('index') }}"><i data-lucide="arrow-left"></i>Back</a></p>
+
+<div class="page-head listing-title">
+  <div>
+    <h1><i data-lucide="house-plug"></i>{{ st.name }}</h1>
+    <div class="title-meta">
+      <span class="muted">Home charger · hosted by {{ st.host_name }}</span>
+      <span class="pill {{ 'available' if open_now else 'offline' }}">{{ 'Open now' if open_now else 'Closed now' }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="details-layout">
+  <section class="card gallery-card">
+    <div id="listing-map" class="map review-map" style="height: 340px; margin: 0" data-lat="{{ st.latitude }}" data-lng="{{ st.longitude }}" data-name="{{ st.name }}"></div>
+  </section>
+  <aside class="card info-card">
+    <h2>Location &amp; hours</h2>
+    <p><i data-lucide="map-pin"></i> {{ st.address }}, {{ st.city }}</p>
+    <p><i data-lucide="clock"></i> {{ open_text(st.open_time, st.close_time) }}</p>
+    <p><i data-lucide="user-round"></i> Host: {{ st.host_name }}</p>
+    {% if amenities %}
+    <h3 class="am-head">Amenities</h3>
+    <ul class="amenity-list">
+      {% for a in amenities %}<li><i data-lucide="{{ a.icon }}"></i><span>{{ a.name }}{% if a.note %}<small>{{ a.note }}</small>{% endif %}</span></li>{% endfor %}
+    </ul>
+    {% else %}<p class="muted small">No amenities listed.</p>{% endif %}
+  </aside>
+</div>
+
+<section class="card">
+  <div class="section-row">
+    <h2>Chargers</h2>
+    {% if vehicles %}
+    <form method="get" class="inline vehicle-pick">
+      <label class="sr-only" for="vehicle">Check for vehicle</label>
+      <select id="vehicle" name="vehicle" onchange="this.form.submit()">
+        {% for v in vehicles %}<option value="{{ v.vehicle_id }}" {{ 'selected' if v.vehicle_id == vehicle_id }}>{{ v.make }} {{ v.model_name }} · {{ v.reg_no }}</option>{% endfor %}
+      </select>
+      <noscript><button class="small">Check</button></noscript>
+    </form>
+    {% endif %}
+  </div>
+  {# an admin decides pending chargers right here and comes back to this page #}
+  {% set deciding = user.role == 'ADMIN' and chargers|selectattr('approval', 'equalto', 'PENDING')|list %}
+  <div class="table-wrap">
+  <table id="chargers">
+    <tr><th>Charger</th><th>Connector</th><th>Type</th><th class="num">kW</th><th>Bay</th><th class="num">₹/kWh</th><th>Status</th>
+      {% if vehicle_id %}<th>Your vehicle</th>{% endif %}{% if deciding %}<th>Decision</th>{% endif %}</tr>
+    {% for c in chargers %}
+    <tr id="charger-{{ c.charger_id }}">
+      <td><b>{{ c.label }}</b></td><td>{{ c.connector }}</td><td>{{ c.current_type }}</td>
+      <td class="num">{{ c.power_kw }}</td><td>{{ c.parking_size }}</td>
+      <td class="num">{{ c.price_per_kwh }}</td><td>{{ charger_status(c.live_status) }}</td>
+      {% if vehicle_id %}<td>{% if c.reason %}<span class="bad">✗ {{ c.reason }}</span>{% else %}<span class="good">✓ fits your vehicle</span>{% endif %}</td>{% endif %}
+      {% if deciding %}<td class="charger-decision">{% if c.approval == 'PENDING' %}{{ review_buttons(c, url_for('listing_details', listing_id=st.listing_id, _anchor='chargers')) }}
+        {% elif c.approval == 'REJECTED' and c.review_note %}<small class="muted">{{ c.review_note }}</small>{% endif %}</td>{% endif %}
+    </tr>
+    {% else %}<tr><td colspan="9" class="muted">No chargers listed.</td></tr>{% endfor %}
+  </table>
+  </div>
+  {% if user.role == 'CUSTOMER' and public %}
+  <p style="margin:.9rem 0 0"><a class="btn" href="{{ url_for('customer_search', vehicle=vehicle_id) }}"><i data-lucide="calendar-plus"></i>Book on Find chargers</a></p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='review_map.js') }}"></script>{% endblock %}

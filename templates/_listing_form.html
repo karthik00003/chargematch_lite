@@ -1,0 +1,31 @@
+{# Edit-listing form (new listings use the step-by-step page), same markup and texts as the original's _listing_form.html.
+   Expects: action, map_id, s, form (values of a refused save), field_errors, amenities, chosen. #}
+{% from "_macros.html" import field_err %}
+{% set fe = field_errors or {} %}
+<div class="locate-bar">
+  <button type="button" class="locate-btn secondary" data-map="{{ map_id }}">
+    <i data-lucide="locate-fixed"></i>Use my current location</button>
+  <span class="locate-msg muted small" id="{{ map_id }}-msg" role="status">Drag the pin or click the map to move the listing.</span>
+</div>
+{{ field_err(fe, 'location') }}
+<div id="{{ map_id }}" class="map small-map pick-map"
+     data-lat="{{ form.latitude or s.latitude }}" data-lng="{{ form.longitude or s.longitude }}"></div>
+<form method="post" action="{{ action }}" class="grid-form listing-form" data-map="{{ map_id }}" data-validate novalidate>{{ csrf_field() }}
+  <label class="{{ 'has-error' if fe.name }}">Name <input name="name" autocomplete="off" required minlength="3" maxlength="100" data-label="Name" value="{{ form.name or s.name }}">
+    <small class="hint">What customers will see in search.</small>{{ field_err(fe, 'name') }}</label>
+  <label class="{{ 'has-error' if fe.address }}">Address <input name="address" class="f-address" autocomplete="off" required minlength="5" maxlength="200" data-label="Address" value="{{ form.address or s.address }}"
+                        placeholder="Filled in from the pin — you can edit it">{{ field_err(fe, 'address') }}</label>
+  <label class="{{ 'has-error' if fe.city }}">City <input name="city" class="f-city" autocomplete="off" required data-label="City" maxlength="50" pattern="[A-Za-z]+([ .'\-][A-Za-z]+)*\.?" data-msg-pattern="Use letters and spaces only" title="Letters and spaces only" value="{{ form.city or s.city }}">{{ field_err(fe, 'city') }}</label>
+  <label>Latitude <input name="latitude" class="f-lat" required readonly tabindex="-1" value="{{ form.latitude or s.latitude }}"
+                         placeholder="set by the pin"></label>
+  <label>Longitude <input name="longitude" class="f-lng" required readonly tabindex="-1" value="{{ form.longitude or s.longitude }}"
+                          placeholder="set by the pin"></label>
+  {% if form %}{% set open_v, close_v = ('00:00', '23:59') if form.open_24h else (form.open_time or '', form.close_time or '') %}
+  {% else %}{% set open_v, close_v = s.open_time|hm, s.close_time|hm %}{% endif %}
+  {% with hours_error = fe.hours, open_v = open_v, close_v = close_v %}{% include "_hours_fields.html" %}{% endwith %}
+  <div class="full">{% include "_amenity_checklist.html" %}{{ field_err(fe, 'amenities') }}</div>
+  {% if fe.db %}<p class="full flash error"><i data-lucide="circle-alert"></i><span>{{ fe.db }}</span></p>{% endif %}
+  <button class="full submit">Save listing</button>
+</form>
+<p class="muted small">Latitude/longitude can't be typed: they follow the pin. Address and city fill in from the pin; you can edit them.
+  Tick “Open 24 hours” for a listing that is always open. Customers can book only inside the opening hours (checked again by the database).</p>

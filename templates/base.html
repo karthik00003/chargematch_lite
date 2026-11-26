@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B4048">
+  <title>{% block title %}ChargeMatch Lite{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  {% block head %}{% endblock %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='lite.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='%23EDFF12'/><path d='M13 2 4 14h7l-1 8 9-12h-7z' fill='%230B4048'/></svg>">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<a class="skip-link" href="#main">Skip to content</a>
+
+{% set nav = {
+  'CUSTOMER': [('customer_search', 'Find chargers', 'map-pinned'), ('customer_bookings', 'My bookings', 'calendar-check'), ('customer_vehicles', 'My vehicles', 'car')],
+  'HOST': [('host_dashboard', 'My chargers', 'house-plug'), ('host_requests', 'Bookings', 'calendar-check')],
+  'ADMIN': [('admin_dashboard', 'Admin', 'shield-check')],
+} %}
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{ url_for('index') }}" aria-label="ChargeMatch Lite home">
+      <span class="brand-mark"><i data-lucide="zap"></i></span><span>Charge<b>Match</b></span>
+    </a>
+
+    {% if user %}
+    {# Hamburger (CSS-only): the checkbox toggles the menu on small screens #}
+    <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true">
+    <label for="nav-toggle" class="nav-burger" aria-label="Menu"><span></span><span></span><span></span></label>
+
+    <div class="nav-menu">
+      <nav aria-label="Main">
+        {% for endpoint, label, icon in nav[user.role] %}
+          <a href="{{ url_for(endpoint) }}" class="{{ 'active' if request.endpoint == endpoint }}"
+             {% if request.endpoint == endpoint %}aria-current="page"{% endif %}><span class="nav-icon"><i data-lucide="{{ icon }}"></i></span>{{ label }}</a>
+        {% endfor %}
+      </nav>
+      <div class="user">
+        <span class="user-name">{{ user.name }} <small class="pill role">{{ user.role|lower }}</small></span>
+        <form method="post" action="{{ url_for('logout') }}">{{ csrf_field() }}<button class="btn small ghost"><i data-lucide="log-out"></i>Log out</button></form>
+      </div>
+    </div>
+    {% else %}
+    <div class="nav-guest">
+      {% if request.endpoint != 'login' %}<a class="btn small outline" href="{{ url_for('login') }}"><i data-lucide="log-in"></i>Log in</a>{% endif %}
+      {% if request.endpoint != 'register' %}<a class="btn small" href="{{ url_for('register') }}"><i data-lucide="user-plus"></i>Sign up</a>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</header>
+
+<main id="main">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}
+    <div class="flashes" role="status">
+      {% for cat, m in msgs %}<div class="flash {{ cat }}"><span class="flash-icon"><i data-lucide="{{ 'triangle-alert' if cat == 'error' else 'circle-check' }}"></i></span><span>{{ m }}</span></div>{% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <span><b style="color: var(--lime)">⚡</b> ChargeMatch Lite · peer-to-peer home EV charger sharing · DBMS project</span>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/lucide@1.74.0/dist/umd/lucide.min.js"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='validate.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

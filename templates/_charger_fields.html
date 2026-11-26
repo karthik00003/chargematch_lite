@@ -1,0 +1,36 @@
+{# The charger fields (used by the wizard, the "Add charger" form on My chargers and the Edit charger page).
+   Expects: rules (= charger_rules()), optional c (charger being edited), optional unnamed (wizard: the fields are not
+   sent; "Add charger" copies them into the table above). Two columns: Label | Connector · Power | Parking bay · Price.
+   Pick the connector first: host.js then fills Power and Parking bay with ONLY that connector's values. Flask
+   (parse_charger) and the database (CHECK chk_charger_setup) check them again. #}
+{% macro nm(field) %}{% if not unnamed %} name="{{ field }}"{% endif %}{% endmacro %}
+<label>Label <input{{ nm('label') }} class="f-label" required minlength="3" maxlength="40" placeholder="e.g. WALLBOX" value="{{ c.label if c else '' }}" autocomplete="off">
+  <small class="field-error f-label-err" aria-live="polite"></small></label>
+<label>Connector
+  <select{{ nm('connector_id') }} class="f-connector">
+    <option value="">Choose the connector…</option>
+    {% for r in rules %}
+    <option value="{{ r.connector_id }}" data-code="{{ r.code }}"
+            data-kw='{{ r.kw|tojson }}' data-kw-labels='{{ r.kw_labels|tojson }}'
+            data-bays='{{ r.bays|tojson }}'
+            {{ 'selected' if c and c.connector_id|string == r.connector_id|string }}>{{ r.name }}</option>
+    {% endfor %}
+  </select>
+  <small class="hint">Home chargers are AC only (no CCS2 / CHAdeMO).</small>
+  <small class="field-error f-connector-err" aria-live="polite"></small></label>
+<label>Power (kW)
+  {# host.js fills the chosen connector's power values #}
+  <select{{ nm('power_kw') }} class="f-power" data-value="{{ '%g'|format(c.power_kw|float) if c and c.power_kw not in (none, '') else '' }}">
+    <option value="">Choose the connector first</option>
+  </select>
+  <small class="hint f-power-hint"></small><small class="field-error f-power-err" aria-live="polite"></small></label>
+<label>Parking bay fits
+  {# host.js keeps only the bays the chosen connector may serve: LECCS 2W / 3W, the others any #}
+  <select{{ nm('parking_size') }} class="f-bay" data-value="{{ c.parking_size if c else '' }}">
+    <option value="">Choose the connector first</option>
+  </select>
+  <small class="hint f-bay-hint"></small>
+</label>
+<label>Price (₹ per kWh) <input{{ nm('price') }} class="f-price" type="number" inputmode="decimal" step="0.01" min="5" max="30"
+                        value="{{ c.price_per_kwh if c else '' }}" placeholder="5 – 30">
+  <small class="hint">₹5–30 per kWh</small><small class="field-error f-price-err" aria-live="polite"></small></label>

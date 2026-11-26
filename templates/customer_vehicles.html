@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}My vehicles · ChargeMatch Lite{% endblock %}
+{% block content %}
+<div class="page-head"><h1><i data-lucide="car"></i>My vehicles</h1></div>
+
+<table>
+  <tr><th>Reg no</th><th>Model</th><th>Class</th><th class="num">Battery</th><th>Connectors</th><th></th></tr>
+  {% for v in vehicles %}
+  <tr id="v-{{ v.vehicle_id }}" class="{{ 'highlight' if highlight == v.vehicle_id }}">
+    <td><b>{{ v.reg_no }}</b></td>
+    <td>{{ v.make }} {{ v.model_name }}</td>
+    <td>{{ v.vehicle_class }}</td>
+    <td class="num">{{ v.battery_kwh }} kWh</td>
+    <td>{{ v.connectors }}</td>
+    <td class="actions">
+      {% if v.num_bookings == 0 %}
+      <form method="post" action="{{ url_for('customer_vehicle_delete', vid=v.vehicle_id) }}"
+            data-confirm="Remove {{ v.reg_no }}?">{{ csrf_field() }}<button class="danger small">Remove</button></form>
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6" class="muted">No vehicles yet. Add one below to start finding compatible chargers.</td></tr>
+  {% endfor %}
+</table>
+<p class="muted small">Vehicles with bookings can't be removed, because their booking history is kept.</p>
+
+<div class="card narrow">
+  <h2>Add a vehicle</h2>
+  <form method="post">{{ csrf_field() }}
+    <label>Vehicle type
+      <select name="vehicle_class" id="vclass" required data-msg-required="Choose a vehicle type">
+        <option value="">— choose a type —</option>
+        {% for cls, label in vehicle_classes.items() %}
+        <option value="{{ cls }}" {{ 'selected' if form_class == cls }}>{{ label }} ({{ models|selectattr('vehicle_class', 'equalto', cls)|list|length }} models)</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Model
+      <select name="model_id" id="model" required data-msg-required="Choose a model">
+        <option value="">— choose your model —</option>
+        {% for cls, label in vehicle_classes.items() %}
+        <optgroup label="{{ label }}">
+          {% for m in models if m.vehicle_class == cls %}
+          <option value="{{ m.model_id }}" data-class="{{ m.vehicle_class }}" {{ 'selected' if form.model_id == m.model_id|string }}
+                  data-spec="{{ m.battery_kwh }} kWh battery · Connectors: {{ m.connectors }}">{{ m.make }} {{ m.model_name }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+    </label>
+    <p id="model-spec" class="muted small"></p>
+    <label>Registration number
+      <input name="reg_no" placeholder="KA19MN1234" value="{{ form.reg_no or '' }}" required maxlength="13" autocapitalize="characters"
+             pattern="\s*[A-Za-z]{2}[\s\-]?\d{2}[\s\-]?[A-Za-z]{1,3}[\s\-]?\d{4}\s*" title="e.g. KA19MN1234 or KA 19 MN 1234" data-msg-pattern="Enter a number like KA19MN1234">
+    </label>
+    <button class="add-vehicle">Add vehicle</button>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Vehicle type -> only that category's models (from the original; the <select> is rebuilt because hidden <option>s don't work in Safari).
+  const type = document.getElementById("vclass"), sel = document.getElementById("model"), spec = document.getElementById("model-spec");
+  const all = [...sel.querySelectorAll("option[data-class]")].map((o) => o.cloneNode(true));
+  function show() { spec.textContent = sel.selectedOptions[0]?.dataset.spec || ""; }
+  function filter() {
+    const keep = sel.value;
+    const opts = all.filter((o) => o.dataset.class === type.value);
+    sel.replaceChildren(new Option(type.value ? "— choose your model —" : "— choose a type first —", ""), ...opts.map((o) => o.cloneNode(true)));
+    sel.value = opts.some((o) => o.value === keep) ? keep : "";
+    sel.disabled = !type.value;
+    show();
+  }
+  type.addEventListener("change", filter);
+  sel.addEventListener("change", show);
+  filter();
+</script>
+{% endblock %}

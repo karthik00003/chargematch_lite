@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Log in · ChargeMatch Lite{% endblock %}
+{% block content %}
+<div class="auth-page">
+  {% with heading = 'Welcome back to <span class="hl">ChargeMatch</span>', sub = 'Log in to find a home charger, manage the chargers you share, or review listings.' %}
+    {% include "_auth_side.html" %}
+  {% endwith %}
+  <div class="auth-form">
+    <h1>Log in</h1>
+    <form method="post">{{ csrf_field() }}
+      <label>Email <input type="email" name="email" value="{{ email or '' }}" required autofocus maxlength="120" autocomplete="username" placeholder="you@example.com"></label>
+      <label>Password <input type="password" name="password" required maxlength="128" autocomplete="current-password" placeholder="••••••••"></label>
+      <button type="submit"><i data-lucide="log-in"></i>Log in</button>
+    </form>
+    <p class="muted small">New here? <a href="{{ url_for('register') }}">Create an account</a></p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{# Host: the full amenity checklist (same list + icons customers filter by) with an optional note each.
+   Lives inside a listing form. Expects: amenities, chosen = {amenity_id: note} (may be empty). Copied from the original. #}
+<fieldset class="amenity-checklist">
+  <legend><i data-lucide="sparkles"></i>Amenities <span class="muted small">(customers can filter by these)</span></legend>
+  <div class="amenity-grid">
+    {% for a in amenities %}
+    {% set on = a.amenity_id in chosen %}
+    <div class="amenity-opt {{ 'on' if on }}">
+      <label class="check"><input type="checkbox" name="amenity" value="{{ a.amenity_id }}" {{ 'checked' if on }} data-name="{{ a.name }}" data-icon="{{ a.icon }}">
+        <i data-lucide="{{ a.icon }}"></i>{{ a.name }}</label>
+      <input name="note_{{ a.amenity_id }}" maxlength="100" data-label="Note" value="{{ (chosen[a.amenity_id] or '') if on else '' }}"
+             placeholder="{{ 'e.g. open 8am–10pm' if a.name == 'Café nearby' else 'Note (optional)' }}" aria-label="Note for {{ a.name }}"
+             {{ '' if on else 'disabled' }}>
+    </div>
+    {% endfor %}
+  </div>
+</fieldset>

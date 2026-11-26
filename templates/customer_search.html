@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_macros.html" import live_badge %}
+{% block title %}Find chargers · ChargeMatch Lite{% endblock %}
+{% block content %}
+{% if not vehicles %}
+  <div class="flash error">Add a vehicle first so we can check which chargers fit it — <a href="{{ url_for('customer_vehicles') }}">My vehicles</a>.</div>
+{% endif %}
+<div class="page-head"><h1><i data-lucide="map-pinned"></i>Find chargers</h1></div>
+<div class="search-layout">
+  <aside class="card controls">
+    <h2>Find a charger</h2>
+    <label>Vehicle
+      <select id="vehicle">
+        {% for v in vehicles %}
+          <option value="{{ v.vehicle_id }}" {{ 'selected' if v.vehicle_id == selected }}
+                  data-spec="{{ v.vehicle_class }} · {{ v.battery_kwh }} kWh · {{ v.connectors }}">
+            {{ v.make }} {{ v.model_name }} · {{ v.reg_no }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <p id="vehicle-spec" class="muted small"></p>
+    <div class="radius-field">
+      <div class="radius-head">
+        <label for="radius">Search radius</label>
+        <output id="radius-out" for="radius" aria-live="polite">Within 10 km</output>
+      </div>
+      <input id="radius" type="range" min="1" max="50" step="1" value="10" aria-valuetext="Within 10 km">
+      <div class="radius-scale muted small" aria-hidden="true"><span>1 km</span><span>50 km</span></div>
+      <div class="radius-quick" role="group" aria-label="Quick radius">
+        {% for km in (2, 5, 10, 25) %}<button type="button" class="chip{{ ' on' if km == 10 }}" data-km="{{ km }}" aria-pressed="{{ 'true' if km == 10 else 'false' }}">{{ km }} km</button>{% endfor %}
+      </div>
+    </div>
+    <label class="check"><input id="only_compatible" type="checkbox" checked> Only chargers that fit my vehicle</label>
+    <fieldset class="amenity-filter">
+      <legend>Must have <span class="muted small">(all selected)</span></legend>
+      <div class="chips">
+        {% for a in amenities %}
+        <label class="chip" title="{{ a.name }}"><input type="checkbox" name="amenity" value="{{ a.amenity_id }}">
+          <i data-lucide="{{ a.icon }}"></i><span>{{ a.name }}</span></label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <button id="locate" type="button"><i data-lucide="locate-fixed"></i>Use my current location</button>
+    <p id="loc-label" class="muted small"></p>
+    <p class="muted small">Tip: click anywhere on the map to search from that point instead.</p>
+  </aside>
+  <section>
+    <div class="live-legend" aria-label="Map colours">{% for k in ('available', 'in_use', 'offline') %}{{ live_badge(k) }}{% endfor %}
+      <small class="muted">· faded pin = nothing there fits this vehicle</small></div>
+    <div id="map" class="map"></div>
+    <div id="status" class="muted"></div>
+    <p class="muted small estimate-note"><i data-lucide="info"></i><span>You pay for the energy you actually take: the host
+      notes your battery % when charging starts and ends, and the bill is (end % − start %) × your battery size × the price per kWh.</span></p>
+    <div id="results"></div>
+  </section>
+</div>
+
+<template id="book-form">
+  <form method="post" action="{{ url_for('customer_book') }}" class="book-form" data-validate-self>{{ csrf_field() }}
+    <input type="hidden" name="charger_id">
+    <input type="hidden" name="vehicle_id">
+    <label class="inline-label">Start <input type="datetime-local" name="start_time" required></label>
+    <label class="inline-label">End <input type="datetime-local" name="end_time" required></label>
+    <output class="duration" aria-live="polite"></output>
+    <button class="book-btn">Book</button>
+    <small class="book-error bad" aria-live="polite"></small>
+  </form>
+</template>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.CM = { center: [{{ center[0] }}, {{ center[1] }}], api: "{{ url_for('api_nearby') }}", minMin: 15, maxMin: 720 };
+</script>
+<script src="{{ url_for('static', filename='customer_map.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Register · ChargeMatch Lite{% endblock %}
+{% block content %}
+<div class="auth-page">
+  {% with heading = 'Join the <span class="hl">smarter</span> charging network', sub = 'Sign up to find a home charger, or to share yours when you are not using it.' %}
+    {% include "_auth_side.html" %}
+  {% endwith %}
+  <div class="auth-form">
+  <h1>Create account</h1>
+  <form method="post">{{ csrf_field() }}
+    <label>Name <input name="name" value="{{ form.name or '' }}" required minlength="2" maxlength="80" autocomplete="name"></label>
+    <label>Email <input type="email" name="email" value="{{ form.email or '' }}" required maxlength="120" autocomplete="email"></label>
+    <label>Password <input type="password" name="password" minlength="6" maxlength="128" required autocomplete="new-password"></label>
+    <label>Confirm password <input type="password" name="confirm" minlength="6" maxlength="128" required autocomplete="new-password" data-match="password" data-msg-match="Passwords don't match"></label>
+    <label>I am a
+      <select name="role" required data-msg-required="Choose a role">
+        <option value="CUSTOMER" {{ 'selected' if form.role != 'HOST' }}>EV owner (customer)</option>
+        <option value="HOST" {{ 'selected' if form.role == 'HOST' }}>Host (I want to share my home charger)</option>
+      </select>
+    </label>
+    <button type="submit"><i data-lucide="user-plus"></i>Create account</button>
+  </form>
+  <p class="muted">Anyone can be a host. Each charger you list is checked by an admin before it appears in search.</p>
+  <p class="muted small">Already registered? <a href="{{ url_for('login') }}">Log in</a></p>
+  </div>
+</div>
+{% endblock %}

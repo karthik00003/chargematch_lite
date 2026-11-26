@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{# "List my charger": the original ChargeMatch registration wizard (host_wizard.html), as steps that switch inside the
+   page. Nothing is stored until "Submit for approval": then Flask saves the listing, its amenities and its chargers in
+   ONE transaction (listing, listing_amenity, charger). Lite has no drafts and no photos, so those parts are left out. #}
+{% from "_macros.html" import field_err %}
+{% block title %}List my charger · ChargeMatch Lite{% endblock %}
+{% macro nav_buttons(step, last=false) %}
+  <div class="wizard-nav">
+    {% if step > 1 %}<button type="button" class="secondary" data-go="{{ step - 1 }}"><i data-lucide="arrow-left"></i>Back</button>{% endif %}
+    {% if last %}<button class="w-submit" data-always><i data-lucide="send"></i>Submit for approval</button>
+    {% else %}<button type="button" class="w-next" data-go="{{ step + 1 }}"><i data-lucide="arrow-right"></i>Continue</button>{% endif %}
+  </div>
+{% endmacro %}
+{% block content %}
+{% set fe = field_errors %}
+<p class="crumbs"><a href="{{ url_for('host_dashboard') }}"><i data-lucide="arrow-left"></i>My chargers</a></p>
+<div class="page-head"><h1><i data-lucide="circle-plus"></i>List my charger</h1>
+  <span class="pill p2p">Not saved until you submit</span></div>
+
+<ol class="wizard-steps lite-steps" aria-label="Registration steps">
+  {% for n, label, icon in steps %}
+  <li data-step="{{ n }}">
+    <a href="#step-{{ n }}" data-go="{{ n }}">
+      <span class="ws-num">{{ n }}</span>
+      <span class="ws-label">{{ label }}</span></a></li>
+  {% endfor %}
+</ol>
+
+<div class="card wizard-card">
+<form method="post" id="listing-wizard" class="listing-wizard" data-map="map-wiz" data-validate data-validate-self novalidate
+      data-start="{{ start }}">{{ csrf_field() }}
+
+  {# ------------------------------------------------------------------ 1 · location #}
+  <section class="wizard-pane" data-step="1" id="step-1" aria-labelledby="h-step-1">
+    <h2 id="h-step-1">1 · Where is the charger?</h2>
+    <p class="muted small">Use your current location (best when you're at home, next to the charger), or click the map and drag the pin.
+      Address and city fill in from the pin; you can edit them.</p>
+    <div class="locate-bar">
+      <button type="button" class="locate-btn" data-map="map-wiz"><i data-lucide="locate-fixed"></i>Use my current location</button>
+      <span class="locate-msg muted small" id="map-wiz-msg" role="status">Or click the map to drop the pin, then drag it to the exact spot.</span>
+    </div>
+    {{ field_err(fe, 'location') }}
+    <div id="map-wiz" class="map small-map pick-map" {{ 'data-autolocate' if not form }}
+         data-lat="{{ form.latitude or '' }}" data-lng="{{ form.longitude or '' }}"></div>
+    <div class="grid-form">
+      <label class="{{ 'has-error' if fe.address }}">Address
+        <input name="address" class="f-address" autocomplete="off" required minlength="5" maxlength="200" data-label="Address" value="{{ form.address or '' }}" placeholder="Filled in from the pin — you can edit it">
+        {{ field_err(fe, 'address') }}</label>
+      <label class="{{ 'has-error' if fe.city }}">City
+        <input name="city" class="f-city" autocomplete="off" required data-label="City" maxlength="50" pattern="[A-Za-z]+([ .'\-][A-Za-z]+)*\.?" data-msg-pattern="Use letters and spaces only" title="Letters and spaces only"
+               value="{{ form.city or 'Mangaluru' }}" {{ 'data-prefilled=1' if not form }}>{{ field_err(fe, 'city') }}</label>
+      <label>Latitude <input name="latitude" class="f-lat" readonly required data-msg-required="Set the pin on the map" tabindex="-1" value="{{ form.latitude or '' }}" placeholder="set by the pin"></label>
+      <label>Longitude <input name="longitude" class="f-lng" readonly tabindex="-1" value="{{ form.longitude or '' }}" placeholder="set by the pin"></label>
+    </div>
+    {{ nav_buttons(1) }}
+  </section>
+
+  {# ------------------------------------------------------------------ 2 · details #}
+  <section class="wizard-pane" data-step="2" id="step-2" aria-labelledby="h-step-2" hidden>
+    <h2 id="h-step-2">2 · Listing details</h2>
+    <div class="grid-form">
+      {% set first = (user.name or '').split(' ')[0] %}
+      <label class="{{ 'has-error' if fe.name }}">Name
+        <input name="name" autocomplete="off" required minlength="3" maxlength="100" data-label="Name"
+               value="{{ form.name if form else (first ~ "'s Home Charger" if first else '') }}" placeholder="e.g. {{ first or 'Karthik' }}'s Home Charger">
+        <small class="hint">What customers will see in search.</small>{{ field_err(fe, 'name') }}</label>
+      {% if form %}{% set open_v, close_v = ('00:00', '23:59') if form.open_24h else (form.open_time or '', form.close_time or '') %}
+      {% else %}{% set open_v, close_v = '07:00', '22:00' %}{% endif %}
+      {% with hours_error = fe.hours, open_v = open_v, close_v = close_v %}{% include "_hours_fields.html" %}{% endwith %}
+    </div>
+    {{ nav_buttons(2) }}
+  </section>
+
+  {# ------------------------------------------------------------------ 3 · chargers #}
+  <section class="wizard-pane" data-step="3" id="step-3" aria-labelledby="h-step-3" hidden>
+    <h2 id="h-step-3">3 · Chargers <span class="muted small">(at least one)</span></h2>
+    <p class="muted small">Fill in the form and press <b>Add charger</b> (enabled once every value is valid): the charger
+      appears in the table and the form is ready for the next one. <b>Edit</b> loads a charger back into the form.
+      Home chargers are AC only; pick the connector first and the form only offers its power values and parking bays. Price ₹5–30 per kWh. The admin approves each charger on its own.</p>
+    <p class="flash error wiz-no-chargers" {{ 'hidden' if chargers }}><i data-lucide="plug-zap"></i><span>No chargers yet — add at least one to be able to submit.</span></p>
+    {{ field_err(fe, 'charger') }}
+    <table class="charger-review charger-table wiz-chargers" {{ 'hidden' if not chargers }}>
+      <thead><tr><th>Label</th><th>Connector</th><th class="num">kW</th><th>Bay</th>
+                 <th class="num">₹/kWh</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for c in chargers %}
+        <tr class="wiz-charger">
+          <td><b>{{ c.label }}</b></td><td>{{ c.connector }}</td>
+          <td class="num">{{ c.power_kw }}</td><td>{{ c.parking_size }}</td>
+          <td class="num">{{ c.price }}</td>
+          <td class="row-actions"><button type="button" class="small secondary c-edit"><i data-lucide="pencil"></i>Edit</button>
+            <button type="button" class="small ghost c-remove"><i data-lucide="trash-2"></i>Remove</button>
+            <input type="hidden" name="c_label" value="{{ c.label }}"><input type="hidden" name="c_connector" value="{{ c.connector_id }}">
+            <input type="hidden" name="c_power" value="{{ c.power_kw }}"><input type="hidden" name="c_bay" value="{{ c.parking_size }}">
+            <input type="hidden" name="c_price" value="{{ c.price }}"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {# the entry fields have no name: they are not sent; "Add charger" copies them into the table above #}
+    <div class="charger-editor charger-form grid-form" id="charger-entry" role="group" aria-label="Charger">
+      <h3 class="editor-title full"><span>{{ 'Add another charger' if chargers else 'Add a charger' }}</span></h3>
+      {% with c = none, unnamed = true %}{% include "_charger_fields.html" %}{% endwith %}
+      <div class="form-actions full">
+        <button type="button" class="f-add" disabled title="Fill in every charger value first"><i data-lucide="plus"></i><span>Add charger</span></button>
+        <button type="button" class="secondary f-cancel" hidden>Cancel</button>
+      </div>
+    </div>
+    {{ nav_buttons(3) }}
+    <dialog class="modal unsaved-charger" id="unsaved-charger" aria-labelledby="unsaved-charger-title">
+      <div class="modal-head"><h2 id="unsaved-charger-title"><i data-lucide="plug-zap"></i><span>Add this charger before continuing?</span></h2></div>
+      <div class="modal-body">
+        <p class="muted small unsaved-msg">The charger form below the table still has values that aren't saved.</p>
+        <div class="form-actions">
+          <button type="button" class="u-add"><i data-lucide="plus"></i><span>Add charger</span></button>
+          <button type="button" class="secondary u-discard"><i data-lucide="x"></i>Discard</button>
+          <button type="button" class="link u-stay">Keep editing</button>
+        </div>
+      </div>
+    </dialog>
+  </section>
+
+  {# ------------------------------------------------------------------ 4 · amenities #}
+  <section class="wizard-pane" data-step="4" id="step-4" aria-labelledby="h-step-4" hidden>
+    <h2 id="h-step-4">4 · Amenities <span class="muted small">(optional)</span></h2>
+    {% include "_amenity_checklist.html" %}
+    {{ field_err(fe, 'amenities') }}
+    {% if fe.db %}<p class="flash error"><i data-lucide="circle-alert"></i><span>{{ fe.db }}</span></p>{% endif %}
+    {# filled by host.js when "Submit for approval" finds something missing: one short message + a link to that step #}
+    <p class="flash error missing-msg" role="alert" hidden><i data-lucide="list-checks"></i><span class="missing-text"></span></p>
+    {{ nav_buttons(4, last=true) }}
+    <p class="muted small">Submitting saves the listing, its chargers and amenities. The admin then approves each charger on its
+      own; customers see the listing as soon as one charger is approved.</p>
+  </section>
+</form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.OP = { center: {{ center|list|tojson }}, reverse: "{{ url_for('api_reverse') }}", points: {{ points|tojson }} };
+</script>
+<script src="{{ url_for('static', filename='host.js') }}"></script>
+{% endblock %}

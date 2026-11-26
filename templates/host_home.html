@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "_macros.html" import charger_status %}
+{% block title %}My chargers · ChargeMatch Lite{% endblock %}
+{% block content %}
+<div class="page-head"><h1><i data-lucide="house-plug"></i>My chargers</h1>
+  <a class="btn" href="{{ url_for('host_listing_new') }}"><i data-lucide="circle-plus"></i>List my charger</a></div>
+<p class="muted small">Share your home charger when you're not using it. An admin approves each charger on its own; a listing
+  is visible to customers as soon as one of its chargers is approved and in service.</p>
+
+<div class="stats">
+  <a class="stat" href="{{ url_for('host_requests', tab='upcoming') }}"><b>{{ stats.today or 0 }}</b><span>bookings today</span></a>
+  <a class="stat" href="{{ url_for('host_requests', tab='charging') }}"><b>{{ stats.charging or 0 }}</b><span>charging now</span></a>
+  <a class="stat{{ ' warn' if (stats.unpaid or 0) > 0 }}" href="{{ url_for('host_requests', tab='unpaid') }}"><b>{{ stats.unpaid or 0 }}</b><span>awaiting payment · ₹{{ '{:,.2f}'.format(stats.unpaid_amount) }}</span></a>
+  <div class="stat"><b>₹{{ '{:,.0f}'.format(stats.month_revenue) }}</b><span>collected this month</span></div>
+</div>
+
+{% for s in listings %}
+<div class="card" id="st-{{ s.listing_id }}">
+  <div class="listing-head">
+    <div>
+      <h3>{{ s.name }}</h3>
+      <small class="muted">{{ s.address }}, {{ s.city }} · {{ s.latitude }}, {{ s.longitude }} · {{ open_text(s.open_time, s.close_time) }}</small>
+      <div class="approval-summary" id="summary-{{ s.listing_id }}">
+        <span><b>{{ s.chargers|selectattr('approval', 'equalto', 'APPROVED')|list|length }}</b> approved</span> ·
+        <span><b>{{ s.chargers|selectattr('approval', 'equalto', 'PENDING')|list|length }}</b> pending</span> ·
+        <span><b>{{ s.chargers|selectattr('approval', 'equalto', 'REJECTED')|list|length }}</b> rejected</span>
+        {% if s.visible %}<span class="pill status-badge approved">Visible to customers</span>
+        {% else %}<span class="pill status-badge pending">Not visible yet</span>{% endif %}
+      </div>
+      <p class="listing-earned small"><i data-lucide="wallet"></i>Earned <b>₹{{ '{:,.2f}'.format(s.revenue) }}</b> · kWh sold
+        <b>{{ '{:,.1f}'.format(s.kwh_sold) }}</b> <span class="muted">· {{ s.paid_bills }} paid session{{ 's' if s.paid_bills != 1 }}</span></p>
+      {% if not s.visible %}<small class="muted">Customers see this listing once one of its chargers is approved and in service.</small>{% endif %}
+      <div class="listing-extras">
+        {% if s.amenities %}<span class="amenity-icons">{% for a in amenities if a.amenity_id in s.amenities %}<span class="am" title="{{ a.name }}{{ ': ' ~ s.amenities[a.amenity_id] if s.amenities[a.amenity_id] }}"><i data-lucide="{{ a.icon }}"></i></span>{% endfor %}</span>{% else %}<span class="muted small">No amenities listed</span>{% endif %}
+        {% if s.visible %}<span class="muted small">· <a href="{{ url_for('listing_details', listing_id=s.listing_id) }}">customer view</a></span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+  <table class="charger-table" id="chargers-{{ s.listing_id }}">
+    <tr><th>Label</th><th>Connector</th><th class="num">kW</th><th>Bay</th><th class="num">₹/kWh</th>
+        <th>Status</th><th class="num">Upcoming</th><th>Actions</th></tr>
+    {% for c in s.chargers %}
+    {% set rejected = c.approval == 'REJECTED' %}
+    <tr id="charger-{{ c.charger_id }}" class="{{ 'is-rejected' if rejected }}">
+      <td><b>{{ c.label }}</b></td>
+      <td>{{ connector_name(c.connector) }}</td>
+      <td class="num">{{ '%g'|format(c.power_kw|float) }}</td><td>{{ c.parking_size }}</td><td class="num">{{ c.price_per_kwh }}</td>
+      <td class="approval-cell">
+        {%- if c.approval == 'PENDING' -%}
+          <span class="live-badge approval_pending">Approval pending</span>
+          <small class="approval-line">Waiting for admin review.</small>
+        {%- elif rejected -%}
+          <span class="live-badge rejected">Rejected</span>
+          <small class="approval-line">See the admin's comment below.</small>
+        {%- else -%}
+          {{ charger_status(c.live_status) }} <span class="approved-tag" title="Approved by the admin">✓ Approved</span>
+          <small class="approval-line">{{ 'Visible to customers.' if c.live_status in ('available', 'in_use') else 'Not visible while ' ~ c.live_status ~ '.' }}</small>
+        {%- endif -%}
+      </td>
+      <td class="num">{{ c.upcoming }}</td>
+      <td class="actions">
+        {% if c.approval == 'APPROVED' and c.status != 'occupied' %}
+        <form method="post" action="{{ url_for('host_charger_status', charger_id=c.charger_id) }}">{{ csrf_field() }}
+          {% if c.status == 'available' %}
+            <button name="status" value="faulty" class="danger small"
+              data-confirm="Mark {{ c.label }} FAULTY? It leaves search. {{ c.upcoming }} upcoming booking(s) stay — please contact those customers.">Faulty</button>
+            <button name="status" value="offline" class="small secondary"
+              data-confirm="Take {{ c.label }} OFFLINE for maintenance? It leaves search. {{ c.upcoming }} upcoming booking(s) stay.">Offline</button>
+          {% else %}
+            <button name="status" value="available" class="small">Back in service</button>
+          {% endif %}
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% if rejected %}
+    <tr id="reject-{{ c.charger_id }}" class="reject-row"><td colspan="8">
+      <div class="reject-box" role="note">
+        <div class="reject-text">
+          <b><i data-lucide="message-square-warning"></i>Rejected by the admin</b>
+          <p class="reject-comment">“{{ c.review_note }}”</p>
+          <small class="muted">Fix what the admin asked for, then resubmit: the charger goes back to “Approval pending”.</small>
+        </div>
+        <div class="reject-actions">
+          <a class="btn small" href="{{ url_for('host_charger_edit', charger_id=c.charger_id) }}"><i data-lucide="pencil"></i>Edit &amp; resubmit</a>
+        </div>
+      </div>
+    </td></tr>
+    {% endif %}
+    {% else %}<tr class="empty"><td colspan="8" class="muted">No chargers yet. Add one with the form below.</td></tr>{% endfor %}
+  </table>
+  </div>
+
+  <details class="charger-editor-wrap" id="charger-editor-{{ s.listing_id }}-wrap">
+    <summary class="btn small"><i data-lucide="plus"></i>Add charger</summary>
+    <form method="post" action="{{ url_for('host_charger_new', listing_id=s.listing_id) }}" class="grid-form charger-form charger-editor"
+          data-charger-form data-validate-self data-labels='{{ s.chargers|map(attribute="label")|list|tojson }}'>{{ csrf_field() }}
+      <h3 class="full editor-title">{{ 'Add another charger' if s.chargers else 'Add a charger' }}</h3>
+      {% with c = none %}{% include "_charger_fields.html" %}{% endwith %}
+      <div class="form-actions full">
+        <button class="f-add" disabled title="Fill in every charger value first"><i data-lucide="plus"></i><span>Add charger</span></button>
+        <button type="button" class="secondary" onclick="this.closest('details').open = false">Cancel</button>
+      </div>
+    </form>
+  </details>
+
+  <div class="listing-tools">
+    <a class="btn small secondary" href="{{ url_for('host_listing', listing_id=s.listing_id) }}"><i data-lucide="pencil"></i>Edit listing &amp; amenities</a>
+  </div>
+</div>
+{% else %}<p class="muted">You haven't listed a charger yet. Press <b>List my charger</b> to start.</p>{% endfor %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='host.js') }}"></script>
+{% endblock %}

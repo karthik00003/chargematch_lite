@@ -1,0 +1,39 @@
+{# Shared pieces, same markup as the original ChargeMatch (_admin_list.html / _approval_badge.html). #}
+
+{# The ONE live status of a charger (CHARGER_STATUS_SQL in app.py) as the original's live-badge #}
+{% macro charger_status(st) -%}
+  {%- set cls, label = LIVE.get(st, (st, st)) -%}
+  <span class="live-badge {{ cls }}">{{ label }}</span>
+{%- endmacro %}
+
+{% macro live_badge(live) -%}
+  {%- set labels = {'available': 'Available', 'in_use': 'In use', 'offline': 'Offline / faulty'} -%}
+  <span class="live-badge {{ live }}">{{ labels[live] }}</span>
+{%- endmacro %}
+
+{% macro approval_badge(approval) -%}
+  <span class="pill status-badge {{ approval|lower }}">{{ {'PENDING': 'Pending approval', 'APPROVED': 'Approved', 'REJECTED': 'Rejected'}[approval] }}</span>
+{%- endmacro %}
+
+{% macro amenity_icons(list) -%}
+  {% if list %}<span class="amenity-icons">{% for a in list %}<span class="am" title="{{ a.name }}{{ ': ' ~ a.note if a.note }}" aria-label="{{ a.name }}"><i data-lucide="{{ a.icon }}"></i></span>{% endfor %}</span>{% endif %}
+{%- endmacro %}
+
+
+{# A server-side field message, as in the original's host_wizard.html (err macro) #}
+{% macro field_err(errs, name) -%}
+  {% if errs and errs[name] %}<small class="field-error" id="err-{{ name }}">{{ errs[name] }}</small>{% endif %}
+{%- endmacro %}
+
+{# Admin decision on ONE pending charger: Approve, or Reject with a reason the host sees. back = where to return. #}
+{% macro review_buttons(c, back) -%}
+  <form method="post" action="{{ url_for('admin_review', charger_id=c.charger_id) }}" class="inline">{{ csrf_field() }}
+    <input type="hidden" name="back" value="{{ back }}">
+    <button class="small" name="decision" value="APPROVED"><i data-lucide="check"></i>Approve</button>
+  </form>
+  <form method="post" action="{{ url_for('admin_review', charger_id=c.charger_id) }}" class="inline reject-charger">{{ csrf_field() }}
+    <input type="hidden" name="back" value="{{ back }}">
+    <input name="reason" placeholder="Reason, at least {{ REJECT_MIN }} characters (the host sees it)" required minlength="{{ REJECT_MIN }}" maxlength="200" aria-label="Reason for rejecting {{ c.label }}">
+    <button class="danger small" name="decision" value="REJECTED"><i data-lucide="x"></i>Reject</button>
+  </form>
+{%- endmacro %}

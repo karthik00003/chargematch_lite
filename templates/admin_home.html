@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_macros.html" import charger_status, review_buttons %}
+{% block title %}Admin · ChargeMatch Lite{% endblock %}
+{% block content %}
+<div class="page-head"><h1><i data-lucide="shield-check"></i>Admin console</h1></div>
+
+<div class="stats admin-summary" id="summary">
+  <a class="stat" data-card="hosts" href="{{ url_for('admin_hosts') }}"><b>{{ summary.hosts }}</b><span>Hosts</span></a>
+  <a class="stat" data-card="customers" href="{{ url_for('admin_customers') }}"><b>{{ summary.customers }}</b><span>Customers</span></a>
+  <a class="stat" data-card="chargers" href="{{ url_for('admin_chargers') }}"><b>{{ summary.chargers }}</b><span>Chargers</span></a>
+  <a class="stat {{ 'warn' if summary.chargers_awaiting }}" data-card="awaiting" href="{{ url_for('admin_chargers', approval='PENDING') }}"><b>{{ summary.chargers_awaiting }}</b><span>Pending approvals</span></a>
+</div>
+
+{# ---------------------------------------------------- the approval queue: compact, one header line per listing;
+   "Open listing" shows the full details (and has the same Approve / Reject buttons) #}
+<div class="card" id="chargers-awaiting">
+  <h2 class="icon-title"><i data-lucide="plug-zap"></i>Chargers awaiting approval
+    <span class="muted small">({{ summary.chargers_awaiting }})</span></h2>
+  <p class="muted small">Each charger is approved on its own.</p>
+  {% for s in pending %}
+  <article class="approval-group compact" id="listing-{{ s.listing_id }}" data-listing="{{ s.listing_id }}">
+    <h3 class="approval-line-head"><span>{{ s.name }} <span class="muted">· {{ s.city }} · {{ s.host_name }}</span></span>
+      <a class="small" href="{{ url_for('listing_details', listing_id=s.listing_id) }}">Open listing →</a></h3>
+    <div class="table-wrap">
+    <table class="approval-rows">
+      <tr><th>Charger</th><th>Connector</th><th class="num">kW</th><th>Bay</th><th class="num">₹/kWh</th><th>Decision</th></tr>
+      {% for c in s.chargers %}
+      <tr id="review-charger-{{ c.charger_id }}" class="approval-row" data-charger="{{ c.charger_id }}">
+        <td><b>{{ c.label }}</b></td><td>{{ connector_name(c.connector) }}</td>
+        <td class="num">{{ '%g'|format(c.power_kw|float) }}</td><td>{{ c.parking_size }}</td>
+        <td class="num">{{ c.price_per_kwh }}</td>
+        <td class="charger-decision">{{ review_buttons(c, url_for('admin_dashboard', _anchor='listing-' ~ s.listing_id)) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+  </article>
+  {% else %}<p class="muted">No chargers waiting for approval.</p>{% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,19 @@
+{# Opening hours: two dropdowns of quarter hours (never typed, so a value like 02:02 can't be entered) + "Open 24 hours".
+   Copied from the original. Expects: open_v, close_v ('HH:MM' strings, may be empty), optional hours_error.
+   Flask (parse_listing_form) and MySQL (chk_listing_hours) check them again. #}
+{% set all_day = open_v == '00:00' and close_v == '23:59' %}
+<label class="{{ 'has-error' if hours_error }}">Opens
+  <select name="open_time" class="f-open" required data-label="Opening time" {{ 'disabled' if all_day }}>
+    <option value="">Choose…</option>
+    {% for t in OPEN_TIMES %}<option value="{{ t }}" {{ 'selected' if t == open_v and not all_day }}>{{ t }}</option>{% endfor %}
+  </select>
+  <small class="hint">Every 15 minutes</small></label>
+<label class="{{ 'has-error' if hours_error }}">Closes
+  <select name="close_time" class="f-close" required data-label="Closing time" data-after="open_time"
+          data-msg-after="Closing time must be after the opening time" {{ 'disabled' if all_day }}>
+    <option value="">Choose…</option>
+    {% for t in CLOSE_TIMES %}<option value="{{ t }}" {{ 'selected' if t == close_v and not all_day }}>{{ t if t != '23:59' else '23:59 (midnight)' }}</option>{% endfor %}
+  </select>
+  <small class="hint">Must be after the opening time</small>{% if hours_error %}<small class="field-error">{{ hours_error }}</small>{% endif %}</label>
+<label class="check hours-24"><input type="checkbox" name="open_24h" class="f-24h" {{ 'checked' if all_day }}> Open 24 hours
+  <small class="hint">00:00–23:59</small></label>

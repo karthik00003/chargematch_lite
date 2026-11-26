@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{# Read-only lists (search only): the admin approves chargers but does not manage accounts. #}
+{% block title %}{{ 'Hosts' if role == 'HOST' else 'Customers' }} · Admin · ChargeMatch Lite{% endblock %}
+{% block content %}
+<div class="page-head"><h1><i data-lucide="{{ 'users' if role == 'HOST' else 'user-round' }}"></i>{{ 'Hosts' if role == 'HOST' else 'Customers' }} <span class="muted small">({{ rows|length }})</span></h1></div>
+<div class="card">
+  <div class="tabs" role="tablist">
+    <a href="{{ url_for('admin_hosts') }}" class="{{ 'active' if role == 'HOST' }}">Hosts<span class="count">{{ counts.HOST or 0 }}</span></a>
+    <a href="{{ url_for('admin_customers') }}" class="{{ 'active' if role == 'CUSTOMER' }}">Customers<span class="count">{{ counts.CUSTOMER or 0 }}</span></a>
+  </div>
+  <form method="get" action="{{ url_for('admin_hosts' if role == 'HOST' else 'admin_customers') }}" class="list-search" role="search">
+    <input type="search" name="q" value="{{ q }}" maxlength="60" placeholder="Search name or email" aria-label="Search name or email">
+    <button class="small"><i data-lucide="search"></i>Search</button>
+    {% if q %}<a class="btn small ghost" href="{{ url_for('admin_hosts' if role == 'HOST' else 'admin_customers') }}">Clear</a>{% endif %}
+  </form>
+  <div class="table-wrap">
+  <table class="admin-list" id="{{ 'hosts' if role == 'HOST' else 'customers' }}-list">
+    <tr><th>Name</th><th>Email</th><th>Joined</th>
+      {% if role == 'HOST' %}<th class="num">Listings</th><th class="num">Chargers</th>{% else %}<th>Vehicles</th><th class="num">Bookings</th>{% endif %}
+      <th>Status</th></tr>
+    {% for u in rows %}
+    <tr data-user="{{ u.user_id }}">
+      <td><b>{{ u.name }}</b></td><td>{{ u.email }}</td><td>{{ u.created_at|dt }}</td>
+      {% if role == 'HOST' %}<td class="num">{{ u.listings }}</td><td class="num">{{ u.chargers }}</td>
+      {% else %}<td>{{ u.vehicles }}{% if u.vehicle_names %} <small class="muted">· {{ u.vehicle_names }}</small>{% endif %}</td><td class="num">{{ u.bookings }}</td>{% endif %}
+      <td><span class="pill {{ 'available' if u.status == 'ACTIVE' else 'offline' }}">{{ u.status|lower }}</span></td>
+    </tr>
+    {% else %}<tr><td colspan="7" class="muted">No {{ 'hosts' if role == 'HOST' else 'customers' }}{{ ' match “' ~ q ~ '”' if q }}.</td></tr>{% endfor %}
+  </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+/* ChargeMatch Lite: small overrides loaded AFTER the original style.css (which is kept byte-identical).
+   The original defines .steps twice — booking progress (section 6) and the route planner's turn list
+   (section 12, which wins). Lite has no route planner, so the booking progress bar gets its section-6 look back. */
+.booking ol.steps { margin: .9rem 0 .45rem; padding: 0; }
+.booking ol.steps li { display: block; padding: 1.75rem 0 0; border-bottom: 0; border-radius: 0; cursor: default;
+  font-size: .78rem; grid-template-columns: none; }
+.booking ol.steps li:hover { background: none; }
+
+/* "List my charger" steps: the original wizard has 6 steps (with Photos); Lite has 4 (no photos, no review step). */
+.wizard-steps.lite-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) { .wizard-steps.lite-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .wizard-steps.lite-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.wizard-pane .grid-form { margin-bottom: .4rem; }
+.wiz-chargers .row-actions { white-space: nowrap; text-align: right; }
+.wiz-chargers .row-actions button { margin-left: .3rem; }
+.locate-msg.bad { color: var(--danger); }
+
+/* Charger forms (wizard step 3, "Add charger" on My chargers, Edit charger), laid out like the original:
+   Label | Connector · Phase | Power (kW) · Parking bay fits | Price · Cable attached · actions. Two equal columns,
+   one column on small screens. */
+.charger-form.grid-form { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.charger-form.grid-form > .form-actions { grid-column: 1 / -1; margin-top: 0; }
+.charger-form select:disabled { opacity: .55; cursor: not-allowed; }
+.charger-form .f-add:disabled, .charger-form .f-add:disabled:hover {
+  background: transparent; color: var(--lavender); border-color: var(--line-strong); opacity: .6; }
+@media (max-width: 640px) { .charger-form.grid-form { grid-template-columns: 1fr; } }
+.card.narrow.charger-editor { max-width: 680px; }
+
+/* My chargers: earnings per listing (v_revenue_per_listing) */
+.listing-earned { display: flex; align-items: center; gap: .35rem; margin: .35rem 0 .15rem; }
+.listing-earned svg { width: 15px; height: 15px; color: var(--lime); }
+
+/* Admin console: compact "Chargers awaiting approval" (one header line per listing; the listing page has the rest) */
+.approval-group.compact { padding: .75rem 0; }
+.approval-line-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .3rem 1rem;
+  margin: 0 0 .45rem; font-size: 1rem; }
+.approval-line-head .muted { font-weight: 400; }
+
+/* Customer "Past" bookings: one compact line each; click (the <summary>) to open the full card, click again to close */
+.compact-booking { padding: 0; }
+.compact-booking > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center;
+  gap: .35rem .9rem; padding: .75rem 1.1rem; border-radius: var(--radius); }
+.compact-booking > summary::-webkit-details-marker { display: none; }
+.compact-booking > summary:hover { background: rgba(233, 232, 248, .04); }
+.compact-booking > summary:focus-visible { outline: 2px solid var(--line-strong); outline-offset: 2px; }
+.compact-booking .bl-title { flex: 1 1 15rem; min-width: 0; }
+.compact-booking .bl-when { color: var(--muted); font-size: .85rem; }
+.compact-booking .bl-amount { font-weight: 600; min-width: 4.5rem; text-align: right; }
+.compact-booking .bl-chev { width: 1.1rem; height: 1.1rem; color: var(--muted); transition: transform .15s; }
+.compact-booking[open] .bl-chev { transform: rotate(180deg); }
+.compact-booking .booking-body { padding: .2rem 1.1rem 1rem; border-top: 1px solid var(--line); }

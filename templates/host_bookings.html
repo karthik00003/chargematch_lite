@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% from "_macros.html" import charger_status %}
+{% block title %}Bookings · ChargeMatch Lite{% endblock %}
+{% block content %}
+<div class="page-head"><h1><i data-lucide="calendar-check"></i>Bookings at my listings</h1></div>
+
+<nav class="tabs">
+  {% for key, label in tabs.items() %}
+    <a href="{{ url_for('host_requests', tab=key, listing=listing_id) }}" class="{{ 'active' if tab == key }}">{{ label }}<span class="count">{{ counts[key] }}</span></a>
+  {% endfor %}
+</nav>
+<form class="filters" method="get">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <label>Listing
+    <select name="listing" onchange="this.form.submit()">
+      <option value="">All my listings</option>
+      {% for s in listings %}<option value="{{ s.listing_id }}" {{ 'selected' if s.listing_id == listing_id }}>{{ s.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <noscript><button class="small">Show</button></noscript>
+  {% if counts.unpaid %}<span>Total awaiting payment: <span class="due">₹{{ '{:,.2f}'.format(unpaid_amount) }}</span></span>{% endif %}
+</form>
+
+{% if tab == 'requests' %}
+<p class="muted small">Customers ask for a time; nothing is reserved until you <b>Accept</b>. Accepting declines the other
+  requests for the same time (procedure <code>accept_booking</code>).</p>
+{% elif tab == 'upcoming' %}
+<p class="muted small">When the customer arrives, plug in and press <b>Start session</b> with the battery % the car shows
+  (possible from 30 minutes before the slot until it ends).</p>
+{% elif tab == 'charging' %}
+<p class="muted small">When charging is done — even before the booked end time — enter the battery % the car shows now and
+  press <b>Finish now</b>: the database calculates the bill — (end % − start %) ÷ 100 × battery kWh × price — the customer
+  sees it at once, and the charger is available again straight away. The readings and the bill are locked after that.</p>
+{% elif tab == 'unpaid' %}
+<p class="muted small">The customer pays you in person (no online payment). Press <b>Mark as paid</b> when you have the money:
+  their booking then shows “Payment successful ✓”.</p>
+{% endif %}
+
+<table class="bookings">
+  <tr><th>When</th><th>Listing / charger</th><th>Customer / vehicle</th><th>Status</th>
+      {% if tab in ('charging', 'unpaid', 'history') %}<th>Battery %</th><th>Bill</th>{% endif %}<th>Actions</th></tr>
+  {% for b in bookings %}
+  <tr id="bk-{{ b.booking_id }}">
+    <td>{{ b.start_time.strftime('%a') }} {{ b.start_time|dt }}<br><small>to {{ b.end_time.strftime('%H:%M') }}
+      {% if b.status in ('requested', 'accepted') %}{% set mins = ((b.start_time - now).total_seconds() // 60)|int %}
+        · <span class="{{ 'bad' if mins < 0 else 'muted' }}">{% if mins < 0 %}Late{% elif mins < 60 %}in {{ mins }} min{% elif mins < 1440 %}in {{ mins // 60 }} h{% else %}in {{ mins // 1440 }} d{% endif %}</span>
+      {% endif %}</small></td>
+    <td>{{ b.listing_name }}<br><small>{{ b.charger_label }} · {{ b.connector }} · {{ '%g'|format(b.power_kw|float) }} kW</small>
+      {% if b.status in ('accepted', 'charging') %}<br>{{ charger_status(b.charger_live) }}{% endif %}</td>
+    <td>{{ b.customer_name }}
+      <br><small>{{ b.make }} {{ b.model_name }} · {{ b.reg_no }}</small></td>
+    <td><span class="pill {{ b.status }}">{{ b.status }}</span>
+      {% if b.cancel_reason %}<br><small class="muted">{{ b.cancel_reason }}</small>{% endif %}</td>
+
+    {% if tab in ('charging', 'unpaid', 'history') %}
+    <td class="session-pct">{% if b.start_pct is not none %}{{ b.start_pct }} %{% if b.end_pct is not none %} → {{ b.end_pct }} %{% else %} → <span class="muted">charging</span>{% endif %}{% endif %}</td>
+    <td>{% if b.bill_id %}<b>₹{{ b.amount }}</b><br><small>{{ b.bill_kwh }} kWh × ₹{{ b.bill_rate }}</small><br>
+      {% if b.bill_status == 'PAID' %}<span class="pill paid">paid</span>{% else %}<span class="pill pending">payment pending</span>{% endif %}{% endif %}</td>
+    {% endif %}
+
+    <td class="actions">
+      {% if b.status == 'requested' and b.end_time <= now %}
+        {# late requests can still be accepted until the slot's END time (accept_booking / trg_booking_bu check it too) #}
+        <small class="bad slot-ended">This slot has ended, so it can only be declined.</small><br>
+      {% elif b.status == 'requested' %}
+        <form method="post" action="{{ url_for('host_booking_action', bid=b.booking_id, action='accept') }}" class="inline"
+              data-confirm="Accept {{ b.customer_name }}'s request for {{ b.listing_name }} — {{ b.charger_label }}, {{ b.start_time|dt }}–{{ b.end_time.strftime('%H:%M') }}? Other requests for that time are declined.">{{ csrf_field() }}
+          <button class="small"><i data-lucide="check"></i>Accept</button></form>
+      {% endif %}
+      {% if b.status == 'requested' %}
+        <form method="post" action="{{ url_for('host_booking_action', bid=b.booking_id, action='decline') }}" class="inline"
+              data-confirm="Decline {{ b.customer_name }}'s request for {{ b.listing_name }} — {{ b.charger_label }}, {{ b.start_time|dt }}–{{ b.end_time.strftime('%H:%M') }}?">{{ csrf_field() }}
+          <button class="danger small"><i data-lucide="x"></i>Decline</button></form>
+      {% endif %}
+      {% if b.status == 'accepted' %}
+        <form method="post" action="{{ url_for('host_booking_action', bid=b.booking_id, action='start') }}" class="inline start-form pct-form" data-validate-self>{{ csrf_field() }}
+          <label class="inline-label">Battery at start
+            <input type="number" name="start_pct" min="0" max="99" step="1" required inputmode="numeric" placeholder="0–99"
+                   aria-label="Battery % the car shows at the start"> %</label>
+          <button class="small"><i data-lucide="play"></i>Start session</button>
+          <small class="pct-error bad" aria-live="polite"></small></form>
+        <form method="post" action="{{ url_for('host_booking_action', bid=b.booking_id, action='cancel') }}" class="inline"
+              data-confirm="Cancel {{ b.customer_name }}'s booking for {{ b.listing_name }} — {{ b.charger_label }}, {{ b.start_time|dt }}–{{ b.end_time.strftime('%H:%M') }}? Please tell them.">{{ csrf_field() }}
+          <button class="danger small"><i data-lucide="calendar-x"></i>Cancel</button>
+        </form>
+      {% endif %}
+
+      {% if b.status == 'charging' %}
+        <form method="post" action="{{ url_for('host_booking_action', bid=b.booking_id, action='end') }}" class="inline end-form pct-form" data-validate-self
+              data-start="{{ b.start_pct }}">{{ csrf_field() }}
+          <label class="inline-label">Battery at end
+            <input type="number" name="end_pct" min="{{ (b.start_pct or 0) + 1 }}" max="100" step="1" required inputmode="numeric"
+                   aria-label="Battery % the car shows at the end"> %</label>
+          <button class="small"><i data-lucide="square"></i>Finish now</button>
+          <small class="pct-error bad" aria-live="polite"></small>
+        </form>
+      {% endif %}
+
+      {% if b.bill_id and b.bill_status == 'PAYMENT_PENDING' %}
+        <form method="post" action="{{ url_for('host_bill_paid', bill_id=b.bill_id) }}" class="inline"
+              data-confirm="Confirm you received ₹{{ b.amount }} from {{ b.customer_name }}?">{{ csrf_field() }}
+          <button class="small"><i data-lucide="badge-check"></i>Mark as paid</button>
+        </form>
+      {% endif %}
+      {% if b.bill_status == 'PAID' %}<small class="muted">Paid {{ b.paid_at|dt }}</small>{% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7" class="muted">
+    {% if tab == 'requests' %}No requests waiting for an answer.{% elif tab == 'upcoming' %}No accepted bookings coming up.{% elif tab == 'charging' %}No sessions charging right now.
+    {% elif tab == 'unpaid' %}No payments pending. 🎉{% else %}No past bookings yet.{% endif %}</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Battery % forms (from the original): whole numbers, the end above the start. The message appears only when
+  // Enter / the button is pressed with a wrong value, and goes away as soon as the value is valid.
+  document.querySelectorAll(".pct-form").forEach((form) => {
+    const err = form.querySelector(".pct-error");
+    const start = form.querySelector("[name=start_pct]"), end = form.querySelector("[name=end_pct]");
+    let tried = false;
+    const check = () => {
+      const whole = (el, lo, hi) => el && /^\d{1,3}$/.test(el.value) && +el.value >= lo && +el.value <= hi;
+      let msg = "";
+      const s = start ? start.value : form.dataset.start;
+      if (start && !whole(start, 0, 99)) msg = "Enter a whole number from 0 to 99";
+      else if (end && !whole(end, 0, 100)) msg = "Enter a whole number from 0 to 100";
+      else if (end && +end.value <= +s) msg = `Must be higher than the start (${s} %)`;
+      if (!msg) tried = false;
+      if (err) err.textContent = tried ? msg : "";
+      return !msg;
+    };
+    form.addEventListener("input", check);
+    form.addEventListener("submit", (e) => { tried = true; if (!check()) { e.preventDefault(); e.stopImmediatePropagation(); } });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_macros.html" import approval_badge %}
+{% block title %}Edit {{ c.label }} · ChargeMatch Lite{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="{{ url_for('host_dashboard', _anchor='st-' ~ listing.listing_id) }}"><i data-lucide="arrow-left"></i>My chargers</a></p>
+<div class="page-head"><h1><i data-lucide="pencil"></i>Edit charger {{ c.label }}</h1></div>
+<div class="card narrow charger-editor editing">
+  <p>{{ listing.name }} · {{ approval_badge(c.approval) }}</p>
+  {% if c.approval == 'REJECTED' and c.review_note %}
+  <div class="reject-box" role="note"><div class="reject-text">
+    <b><i data-lucide="message-square-warning"></i>Rejected by the admin</b>
+    <p class="reject-comment">“{{ c.review_note }}”</p>
+    <small class="muted">Fix what the admin asked for and save: the charger goes back to “Approval pending”.</small></div></div>
+  {% endif %}
+  <form method="post" class="grid-form charger-form" data-charger-form data-validate-self data-labels='{{ labels|tojson }}'>{{ csrf_field() }}
+    {% include "_charger_fields.html" %}
+    <p class="muted small full">Changing the connector, power or parking bay sends the charger back to the admin
+      for approval; the label and price don't.</p>
+    <div class="form-actions full">
+      <button class="f-add"><i data-lucide="save"></i>{{ 'Save & resubmit' if c.approval == 'REJECTED' else 'Update charger' }}</button>
+      <a class="btn secondary" href="{{ url_for('host_dashboard', _anchor='st-' ~ listing.listing_id) }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='host.js') }}"></script>
+{% endblock %}

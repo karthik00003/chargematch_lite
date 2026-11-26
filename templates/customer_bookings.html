@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}My bookings · ChargeMatch Lite{% endblock %}
+{% block content %}
+<div class="page-head"><h1><i data-lucide="calendar-check"></i>My bookings</h1></div>
+<nav class="tabs">
+  {% for key, label in [('upcoming', 'Upcoming'), ('active', 'Charging / to pay'), ('past', 'Past')] %}
+    <a href="{{ url_for('customer_bookings', tab=key) }}" class="{{ 'active' if tab == key }}">{{ label }}<span class="count">{{ counts[key] }}</span></a>
+  {% endfor %}
+</nav>
+{% if tab == 'past' and bookings %}<p class="muted small">Click a booking to see its details; click again to close it.</p>{% endif %}
+{% for b in bookings %}
+{% set past = tab == 'past' %}
+{% if past %}
+{# Past: one compact line (listing — charger, date/time, status, amount); <details> opens / closes it on click #}
+<details class="card booking compact-booking {{ 'highlight' if b.booking_id == highlight }}" id="b-{{ b.booking_id }}" {{ 'open' if b.booking_id == highlight }}>
+  <summary class="booking-line">
+    <b class="bl-title">{{ b.listing_name }} — {{ b.charger_label }}</b>
+    <span class="bl-when">{{ b.start_time.strftime('%a') }} {{ b.start_time|dt }} – {{ b.end_time.strftime('%H:%M') }}</span>
+    <span class="pill {{ b.status }}">{{ b.status }}</span>
+    {% if b.amount is not none %}<span class="bl-amount">₹{{ b.amount }}</span>{% endif %}
+    <i data-lucide="chevron-down" class="bl-chev" aria-hidden="true"></i>
+  </summary>
+  <div class="booking-body">
+{% else %}
+<div class="card booking {{ 'highlight' if b.booking_id == highlight }}" id="b-{{ b.booking_id }}">
+{% endif %}
+  <div class="listing-head">
+    <div>
+      {% if not past %}
+      <h3>{{ b.listing_name }} — {{ b.charger_label }}
+        <span class="pill {{ b.status }}">{{ 'waiting for the host' if b.status == 'requested' else b.status }}</span>
+      </h3>
+      {% endif %}
+      <small class="muted">{{ b.make }} {{ b.model_name }} ({{ b.reg_no }}) · {{ b.connector }} {{ b.current_type }} · {{ '%g'|format(b.power_kw|float) }} kW</small><br>
+      <small><b>{{ b.start_time.strftime('%a') }} {{ b.start_time|dt }} – {{ b.end_time.strftime('%H:%M') }}</b>
+        <span class="muted">({{ fmt_duration((b.end_time - b.start_time).total_seconds() // 60) }})</span>
+        {% if b.status in ('requested', 'accepted') %}
+          {% set mins = ((b.start_time - now).total_seconds() // 60)|int %}
+          <span class="muted">· {% if mins < 0 %}should have started{% elif mins < 60 %}starts in {{ mins }} min{% elif mins < 1440 %}starts in {{ mins // 60 }} h{% else %}in {{ mins // 1440 }} day(s){% endif %}</span>
+        {% endif %}</small>
+      {% if b.status == 'requested' %}
+        <div class="moved request-note">⏳ Request sent — the host has to accept it. Nothing is reserved until then.</div>
+      {% elif b.status == 'accepted' %}<br><small class="good">✓ Accepted by the host</small>
+      {% endif %}
+      {% if b.cancel_reason %}<br><small class="bad">{{ b.cancel_reason }}</small>{% endif %}
+    </div>
+    <div class="right">
+      {% if b.status in ('requested', 'accepted') %}
+      <form method="post" action="{{ url_for('customer_cancel', bid=b.booking_id) }}" class="cancel-booking"
+            data-confirm="Cancel {{ 'request' if b.status == 'requested' else 'booking' }} at {{ b.listing_name }} — {{ b.charger_label }} on {{ b.start_time|dt }}?">{{ csrf_field() }}
+        <button class="danger small"><i data-lucide="calendar-x"></i>{{ 'Cancel request' if b.status == 'requested' else 'Cancel booking' }}</button>
+      </form>
+      {% elif b.status == 'charging' %}
+      <p class="muted small no-cancel" title="Charging has started"><i data-lucide="lock"></i>Can't cancel: charging has started.
+        The host ends the session and you pay them for the energy used.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if b.status == 'charging' or b.bill_id %}
+    {% set steps = [('Accepted', true), ('Charging', true), ('Bill ready', b.bill_id is not none), ('Paid', b.bill_status == 'PAID')] %}
+    <ol class="steps">{% for label, done in steps %}<li class="{{ 'done' if done }}">{{ label }}</li>{% endfor %}</ol>
+  {% endif %}
+  {% if b.status == 'charging' %}
+    <div class="meter session">
+      <div class="meter-head"><b>Charging session</b> <span class="pill charging">charging</span></div>
+      <p class="small">Started at <b>{{ b.start_pct }} %</b> ({{ b.started_at|dt }}).
+        When you're done, the host enters the battery % at the end and your bill appears here straight away.</p>
+    </div>
+  {% endif %}
+
+  {% if b.bill_id %}
+    <div class="bill" id="bill-{{ b.booking_id }}">
+      <div class="meter-head"><b>Bill</b>
+        {% if b.bill_status == 'PAID' %}<span class="pill paid payment-ok">Payment successful ✓</span>
+        {% else %}<span class="pill pending">Payment pending</span>{% endif %}</div>
+      <table class="readings">
+        <tr><td>Battery at start</td><td class="num">{{ b.start_pct }} %</td></tr>
+        <tr><td>Battery at end</td><td class="num">{{ b.end_pct }} %</td></tr>
+        <tr><td>Energy ({{ b.end_pct - b.start_pct }} % of {{ b.session_battery_kwh }} kWh)</td><td class="num">{{ b.bill_kwh }} kWh</td></tr>
+        <tr><td>Rate</td><td class="num">× ₹{{ b.bill_rate }} / kWh</td></tr>
+        <tr class="total"><td>Amount</td><td class="num">₹{{ b.amount }}</td></tr>
+      </table>
+      {% if b.bill_status == 'PAID' %}
+        <p class="small good">Payment successful ✓ — ₹{{ b.amount }} received by the host on {{ b.paid_at|dt }}. Thank you!</p>
+      {% else %}
+        <p class="small">Payment pending: please pay <b>₹{{ b.amount }}</b> to the host in person (cash or UPI). They will mark it
+          as paid and you'll see “Payment successful” here.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+{% if past %}</div></details>{% else %}</div>{% endif %}
+{% else %}
+<p class="muted">{% if tab == 'upcoming' %}No upcoming bookings.
+  {% elif tab == 'active' %}Nothing charging or waiting for payment.{% else %}No past bookings yet.{% endif %}</p>
+{% endfor %}
+{% endblock %}

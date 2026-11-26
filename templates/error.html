@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} · ChargeMatch Lite{% endblock %}
+{% block content %}
+<div class="auth card error-page">
+  <p class="code">{{ code }}</p>
+  <h1>{{ title }}</h1>
+  <p class="muted">{{ message }}</p>
+  <p>
+    {% if user %}<a class="btn" href="{{ url_for('index') }}">Go to my dashboard</a>
+    {% else %}<a class="btn" href="{{ url_for('login') }}">Log in</a>{% endif %}
+    <button type="button" class="secondary" onclick="history.back()">Go back</button>
+  </p>
+</div>
+{% endblock %}

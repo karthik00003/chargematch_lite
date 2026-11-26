@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import charger_status, approval_badge %}
+{% block title %}Chargers · Admin · ChargeMatch Lite{% endblock %}
+{% block content %}
+<div class="page-head"><h1><i data-lucide="plug-zap"></i>Chargers <span class="muted small">({{ rows|length }})</span></h1></div>
+<div class="card">
+  <div class="tabs" role="tablist">
+    {% for key, label in filters %}
+    <a href="{{ url_for('admin_chargers', approval=key or None) }}" class="{{ 'active' if approval == key }}" data-filter="{{ key or 'ALL' }}">{{ label }}<span class="count">{{ counts.get(key, 0) }}</span></a>
+    {% endfor %}
+  </div>
+  <div class="table-wrap">
+  <table class="admin-list" id="chargers-list">
+    <tr><th>Charger</th><th>Listing</th><th>City</th><th>Host</th><th>Connector</th><th>AC/DC</th>
+      <th class="num">kW</th><th>Bay</th><th class="num">₹/kWh</th><th>Status</th><th>Approval</th><th></th></tr>
+    {% for c in rows %}
+    <tr id="charger-{{ c.charger_id }}" data-charger="{{ c.charger_id }}" data-approval="{{ c.approval }}">
+      <td><b>{{ c.label }}</b></td>
+      <td><a href="{{ url_for('listing_details', listing_id=c.listing_id) }}">{{ c.listing_name }}</a></td>
+      <td>{{ c.city }}</td><td>{{ c.host_name }}</td><td>{{ c.connector }}</td><td>{{ c.current_type }}</td>
+      <td class="num">{{ c.power_kw }}</td><td>{{ c.parking_size }}</td><td class="num">{{ c.price_per_kwh }}</td>
+      <td>{{ charger_status(c.live_status) }}</td>
+      <td>{{ approval_badge(c.approval) }}{% if c.approval == 'REJECTED' and c.review_note %}<br><small class="muted">{{ c.review_note }}</small>{% endif %}</td>
+      <td class="charger-decision">
+        {% if c.approval == 'PENDING' %}
+        <form method="post" action="{{ url_for('admin_review', charger_id=c.charger_id) }}">{{ csrf_field() }}
+          <input type="hidden" name="back" value="{{ request.full_path }}">
+          <button class="small" name="decision" value="APPROVED"><i data-lucide="check"></i>Approve</button>
+        </form>
+        <form method="post" action="{{ url_for('admin_review', charger_id=c.charger_id) }}" class="inline reject-charger">{{ csrf_field() }}
+          <input type="hidden" name="back" value="{{ request.full_path }}">
+          <input name="reason" placeholder="Reason, at least {{ reject_min }} characters (the host sees it)" required minlength="{{ reject_min }}" maxlength="200" aria-label="Reason for rejecting {{ c.label }}">
+          <button class="danger small" name="decision" value="REJECTED"><i data-lucide="x"></i>Reject</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}<tr><td colspan="12" class="muted">No chargers here.</td></tr>{% endfor %}
+  </table>
+  </div>
+</div>
+{% endblock %}
