@@ -152,8 +152,10 @@ Built by `tools/er_chen.py` from the same verified model (`er_model.json`):
   by a user). Single line = partial (a user need not book; `charger.reviewed_by` is NULL until reviewed).
 * **Double rectangle + double diamond** = weak entity and its identifying relationship: `charging_session`'s whole
   primary key is its FK `booking_id`, so a session cannot exist or be identified without its booking.
-* Junction tables are not entities: `listing_amenity` is the M:N diamond *offers* (with its attribute `note`) and
-  `model_connector` is the M:N diamond *accepts*.
+* **Rectangle inside a diamond** = associative entity (an M:N junction table), so the diagram shows all
+  **12 tables = 10 entities + 2 associative entities**: `listing_amenity` (*offers*, listing M : N amenity, with its
+  attribute `note`) and `model_connector` (*accepts*, vehicle_model M : N connector_type). Their key is the two FKs
+  together, shown as a note (PK = listing_id + amenity_id, PK = model_id + connector_id), so no oval is underlined.
 * Relationship names: users *lists* listing · listing *contains* charger · charger *uses* connector_type · users
   *reviews* charger · users *owns* vehicle · vehicle *is of model* vehicle_model (not "is a": ISA means inheritance in
   EER) · users *books* booking · booking *for* vehicle · booking *reserves* charger · booking *has* charging_session

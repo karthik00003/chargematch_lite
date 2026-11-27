@@ -1,10 +1,10 @@
 graph chen {
-  graph [layout=neato, start=2, overlap=prism, overlap_scaling=-6, sep="+18", splines=true, outputorder=edgesfirst,
+  graph [layout=neato, start=5, overlap=prism, overlap_scaling=-6, sep="+18", splines=true, outputorder=edgesfirst,
          pad=0.4, fontname="Helvetica", fontsize=26, labelloc=t,
-         label=<<B>ChargeMatch: ER diagram (Chen notation)</B><BR/><FONT POINT-SIZE="16">generated from information_schema of chargematch_lite · double line = total participation · double box / diamond = weak entity / identifying relationship</FONT>>];
+         label=<<B>ChargeMatch: ER diagram (Chen notation)</B><BR/><FONT POINT-SIZE="16">generated from information_schema of chargematch_lite · double line = total participation · double box / diamond = weak entity / identifying relationship<BR/>rectangle in diamond = associative entity (M:N junction table) · 12 tables = 10 entities + 2 associative entities</FONT>>];
   node [fontname="Helvetica"];
   edge [color="#333333", penwidth=1.4, labelfontsize=22, labelfontname="Helvetica-Bold", labelfontcolor="#B00020",
-        labeldistance=2.8, labelangle=28, len=1.6];
+        labeldistance=3.4, labelangle=28, len=1.6];
   "amenity" [shape=box, style="filled", fillcolor="#E8F4F6", color="#0B4048", penwidth=2, fontsize=22, fontname="Helvetica-Bold", label="amenity"];
   "amenity.amenity_id" [shape=ellipse, color="#5A5A5A", fontsize=15, fontname="Helvetica", margin="0.06,0.02", label=<<U>amenity_id</U>>];
   "amenity" -- "amenity.amenity_id" [len=1.0, penwidth=1, color="#777777"];
@@ -160,12 +160,16 @@ graph chen {
   "R_vehicle_user_id" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="owns"];
   "users" -- "R_vehicle_user_id" [headlabel="1"];
   "R_vehicle_user_id" -- "vehicle" [taillabel="N", color="#333333:invis:#333333"];
-  "R_listing_amenity" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="offers\n(listing_amenity)", fontsize=15];
+  "R_listing_amenity" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, margin="0.02,0.02", label=<<TABLE BORDER="2" CELLBORDER="0" CELLPADDING="3" CELLSPACING="0" COLOR="#0B4048" BGCOLOR="#E8F4F6"><TR><TD><FONT POINT-SIZE="17"><B>listing_amenity</B></FONT></TD></TR><TR><TD><FONT POINT-SIZE="15">(offers)</FONT></TD></TR></TABLE>>];
+  "R_listing_amenity.pk" [shape=note, style="filled", fillcolor="#FFFFFF", color="#777777", fontsize=14, fontname="Helvetica", label="PK = listing_id + amenity_id"];
+  "R_listing_amenity" -- "R_listing_amenity.pk" [len=1.0, style=dotted, penwidth=1.2, color="#777777"];
   "listing" -- "R_listing_amenity" [headlabel="M"];
   "R_listing_amenity" -- "amenity" [taillabel="N"];
   "R_listing_amenity.note" [shape=ellipse, color="#5A5A5A", fontsize=15, fontname="Helvetica", margin="0.06,0.02", label="note"];
   "R_listing_amenity" -- "R_listing_amenity.note" [len=0.9, penwidth=1, color="#777777"];
-  "R_model_connector" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="accepts\n(model_connector)", fontsize=15];
+  "R_model_connector" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, margin="0.02,0.02", label=<<TABLE BORDER="2" CELLBORDER="0" CELLPADDING="3" CELLSPACING="0" COLOR="#0B4048" BGCOLOR="#E8F4F6"><TR><TD><FONT POINT-SIZE="17"><B>model_connector</B></FONT></TD></TR><TR><TD><FONT POINT-SIZE="15">(accepts)</FONT></TD></TR></TABLE>>];
+  "R_model_connector.pk" [shape=note, style="filled", fillcolor="#FFFFFF", color="#777777", fontsize=14, fontname="Helvetica", label="PK = model_id + connector_id"];
+  "R_model_connector" -- "R_model_connector.pk" [len=1.0, style=dotted, penwidth=1.2, color="#777777"];
   "vehicle_model" -- "R_model_connector" [headlabel="M"];
   "R_model_connector" -- "connector_type" [taillabel="N"];
 }
