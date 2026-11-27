@@ -108,6 +108,9 @@ CHECKS = [
     ("Booking on a charger that is not APPROVED (active statuses)",
      """SELECT b.booking_id, c.approval FROM booking b JOIN charger c ON c.charger_id = b.charger_id
          WHERE c.approval <> 'APPROVED' AND b.status IN ('requested','accepted','charging')"""),
+    ("Requested / accepted booking left on an out-of-service charger (the toggle cancels them)",
+     """SELECT b.booking_id, b.charger_id, b.status FROM booking b JOIN charger c ON c.charger_id = b.charger_id
+         WHERE c.status = 'out_of_service' AND b.status IN ('requested', 'accepted')"""),
     ("Charger label shorter than 3 characters (same rule as chk_charger_label)",
      "SELECT charger_id, label FROM charger WHERE CHAR_LENGTH(TRIM(label)) < 3"),
     ("Duplicate amenity names (ignoring case and spaces)",

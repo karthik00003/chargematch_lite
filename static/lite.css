@@ -49,3 +49,11 @@
 .compact-booking .bl-chev { width: 1.1rem; height: 1.1rem; color: var(--muted); transition: transform .15s; }
 .compact-booking[open] .bl-chev { transform: rotate(180deg); }
 .compact-booking .booking-body { padding: .2rem 1.1rem 1rem; border-top: 1px solid var(--line); }
+
+/* Landing page: three service cards (the original had four) and a short intro above them */
+.services.services-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.services-intro { color: var(--lavender-dim); max-width: 52rem; margin: -.2rem 0 1.4rem; line-height: 1.6; }
+@media (max-width: 760px) { .services.services-3 { grid-template-columns: 1fr; } }
+/* the hero's own padding shorthand drops .wrap's side padding, so its text sat 20px left of everything else */
+.hero-inner.wrap { padding-left: 1.25rem; padding-right: 1.25rem; }
+@media (max-width: 760px) { .hero-inner.wrap { padding-left: .9rem; padding-right: .9rem; } }

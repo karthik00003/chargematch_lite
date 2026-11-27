@@ -1,4 +1,4 @@
-# ⚡ ChargeMatch Lite
+# ⚡ ChargeMatch
 
 A peer-to-peer platform where people rent out their **private home EV chargers**
 (Mangaluru / Udupi / Manipal demo data). College DBMS mini-project.
@@ -58,11 +58,11 @@ python3 -m venv .venv
 ```
 You should see:
 ```
-ChargeMatch Lite running at http://127.0.0.1:5070 — press Ctrl+C to stop
+ChargeMatch running at http://127.0.0.1:5070 — press Ctrl+C to stop
 ```
 Leave that Terminal window open and go to **http://127.0.0.1:5070** (the `PORT` in `.env`). The server is **waitress**, like the
 original ChargeMatch: it prints nothing per request, only the banner and any errors.
-Press `Ctrl+C` to stop; it prints `ChargeMatch Lite stopped.`
+Press `Ctrl+C` to stop; it prints `ChargeMatch stopped.`
 
 `run.sh` works from any folder. It uses `.venv/bin/python` and checks the packages, `.env`, the MySQL login and the port
 (it shows who holds the port if it is busy). Then it runs the server **in the foreground** on 127.0.0.1. Closing the
@@ -93,7 +93,7 @@ Every demo account uses the password **`demo1234`**. The database stores only sc
 | Admin | `admin@cmlite.test` | approves / rejects chargers; sees read-only host and customer lists |
 | Host | `ananya@cmlite.test` | Kadri Park + Kankanady (Mangaluru) |
 | Host | `rohan@cmlite.test` | Bejai 24×7 (has a **live charging session**) + Kodialbail |
-| Host | `fathima@cmlite.test` | Surathkal (1 PENDING Type 2 11 kW charger) + Panambur (1 **faulty**) |
+| Host | `fathima@cmlite.test` | Surathkal (1 PENDING Type 2 11 kW charger) + Panambur (1 charger **out of service**) |
 | Host | `prakash@cmlite.test` | Udupi: Ambalpady + Malpe (1 **REJECTED** charger) |
 | Host | `shreya@cmlite.test` | Manipal: Tiger Circle + End Point (1 PENDING) |
 | Customer | `kiran@cmlite.test` | Nexon EV LR + Ather 450X (charging right now at Bejai) |
@@ -122,6 +122,10 @@ Every demo account uses the password **`demo1234`**. The database stores only sc
    database refuses anything else with one CHECK, **`chk_charger_setup`**, even from plain SQL. Nothing is
    stored until *Submit for approval*; then the listing, its amenities and its chargers are saved in **one transaction**
    (a CHECK failure, e.g. a ₹40 price, rolls everything back and the page opens on the step with the message).
+   **Host** → *My chargers* → *Out of service* hides a charger from search and the map and cancels its upcoming
+   bookings (the customer sees "Charger taken out of service by the host"); *Put in service* brings it back. *Delete*
+   works only for a charger with no bookings: otherwise the booking FK (`ON DELETE RESTRICT`) refuses it. The
+   *collected this month* card opens *Payments received* (every paid bill, month filter, total).
 6. **Admin** → *Admin console*: 4 cards. *Hosts* / *Customers* open read-only lists (search only). *Chargers* opens all
    20 chargers with All / Approved / Pending / Rejected filters; *Pending approvals* opens the Pending filter. Approve a
    charger, or reject it with a note the host sees, there or in “Chargers awaiting approval” on the console.
@@ -151,15 +155,15 @@ More example queries (joins, self-join, HAVING, spatial) are in `docs/DB_REPORT.
 ```bash
 .venv/bin/python check_integrity.py
 ```
-Runs 24 read-only checks: orphans, overlapping accepted bookings, bill maths
+Runs 25 read-only checks: orphans, overlapping accepted bookings, bill maths
 (`kwh = (end−start)/100 × battery`, `amount = kwh × rate`), life-cycle consistency, the home-charger rules (same as
-`chk_charger_setup`), plug + parking-bay compatibility, vehicle ownership, charger labels (3+ characters) and duplicate amenity names. The exit code is 0 when all checks pass.
+`chk_charger_setup`), plug + parking-bay compatibility, vehicle ownership, charger labels (3+ characters), duplicate amenity names and bookings left on out-of-service chargers. The exit code is 0 when all checks pass.
 
 ## 6. Project layout
 
 ```
 schema.sql          12 tables → 1 function → 5 triggers → 2 procedures → 2 views
-migrations/         001_charger_rules.sql … 006_amenities_late_accept.sql: bring an existing database up to date
+migrations/         001_charger_rules.sql … 007_out_of_service.sql: bring an existing database up to date
                     (keep users + bookings)
 seed.sql            demo data (relative to today's date)
 setup_db.sh         create DB + app user, load schema + seed (--reset = backup, drop, reload)
@@ -192,6 +196,7 @@ docs/DB_REPORT.md   database report for the viva
 | Database still has the `rating` table or `v_listing_trust` | Back it up, then `mysql -u root chargematch_lite < migrations/004_remove_ratings.sql` |
 | Database still has `users.phone` | Back it up, then `mysql -u root chargematch_lite < migrations/005_remove_phone.sql` |
 | Only 6 amenities, or a late request can't be accepted | Back it up, then `mysql -u root --default-character-set=utf8mb4 chargematch_lite < migrations/006_amenities_late_accept.sql` |
+| Charger status still has `faulty` / `offline` | Back it up, then `mysql -u root --default-character-set=utf8mb4 chargematch_lite < migrations/007_out_of_service.sql` |
 | Database still has `fn_charger_status`, `start_session`, `mark_bill_paid` or `booking.parent_booking_id` | Back it up, then `mysql -u root chargematch_lite < migrations/003_simplify.sql` (keeps every row) |
 | Upgrading a database made before 2026-11-25 (no `phase` / `parking_size` / `cable_provided` on `charger`) | Back it up (`mysqldump -u root --routines --triggers chargematch_lite > backups/x.sql`), then `mysql -u root chargematch_lite < migrations/001_charger_rules.sql`. It keeps users and bookings and turns the demo chargers into valid AC set-ups |
 | Logged out when switching tabs (another Flask app on 127.0.0.1, e.g. the original on 5050) | Cookies are per host, not per port. Lite's login cookie is called `cmlite_session` (8-hour login), so it no longer clashes with another app's `session` cookie. After upgrading, log in once more |

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{# Host: every PAID bill received (host_payments in app.py), newest first, with a month filter. #}
+{% block title %}Payments received · ChargeMatch{% endblock %}
+{% block content %}
+<div class="page-head"><h1><i data-lucide="wallet"></i>Payments received</h1></div>
+
+<div class="stats">
+  <div class="stat"><b>₹{{ '{:,.2f}'.format(total) }}</b><span>total {{ 'in ' ~ month_names[month] if month else 'received' }}</span></div>
+  <div class="stat"><b>{{ rows|length }}</b><span>paid session{{ 's' if rows|length != 1 }}</span></div>
+  <div class="stat"><b>{{ '{:,.1f}'.format(kwh) }}</b><span>kWh sold</span></div>
+</div>
+
+<form method="get" action="{{ url_for('host_payments') }}" class="list-search payments-filter">
+  <label class="inline-label">Month
+    <select name="month" onchange="this.form.submit()">
+      <option value="" {{ 'selected' if not month }}>All months</option>
+      {% for m in months %}<option value="{{ m }}" {{ 'selected' if m == month }}>{{ month_names[m] }}</option>{% endfor %}
+    </select></label>
+  <noscript><button class="small">Show</button></noscript>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+  <table class="bookings payments">
+    <tr><th>Date paid</th><th>Listing — charger</th><th>Customer</th><th class="num">kWh</th><th class="num">Rate</th><th class="num">Amount</th></tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.paid_at|dt }}</td>
+      <td>{{ r.listing_name }} — {{ r.charger_label }}<br><small class="muted">charged {{ r.start_time.strftime('%a') }} {{ r.start_time|dt }}</small></td>
+      <td>{{ r.customer_name }}</td>
+      <td class="num">{{ r.kwh }}</td>
+      <td class="num">₹{{ r.rate }}</td>
+      <td class="num"><b>₹{{ r.amount }}</b></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">No payments received{{ ' in ' ~ month_names[month] if month }} yet.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+<p class="muted small">Only bills marked as paid are listed. Bills still waiting for payment are on
+  <a href="{{ url_for('host_requests', tab='unpaid') }}">Bookings → Awaiting payment</a>.</p>
+{% endblock %}

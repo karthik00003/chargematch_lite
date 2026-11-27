@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import charger_status, review_buttons %}
-{% block title %}{{ st.name }} · ChargeMatch Lite{% endblock %}
+{% block title %}{{ st.name }} · ChargeMatch{% endblock %}
 {% block content %}
 {% if not public %}
   <div class="flash error">{% if st.host_status == 'DISABLED' %}The host account is disabled{% else %}No charger here is approved and in service yet{% endif %}: customers can't see it. You are viewing it as {{ 'its host' if user.role == 'HOST' else 'an admin' }}.</div>

@@ -62,7 +62,7 @@ cleanup() {                 # $1 = exit code (0 for Ctrl+C), else the script's o
 trap 'cleanup 0' INT TERM
 trap cleanup EXIT
 
-say "Starting ChargeMatch Lite on http://127.0.0.1:$PORT (log: $APP_LOG)…"
+say "Starting ChargeMatch on http://127.0.0.1:$PORT (log: $APP_LOG)…"
 FLASK_DEBUG=0 "$PY" app.py >"$APP_LOG" 2>&1 &
 APP_PID=$!
 for _ in $(seq 1 40); do

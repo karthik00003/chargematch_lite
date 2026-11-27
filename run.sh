@@ -28,18 +28,18 @@ PORT="${PORT:-5060}"
 if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
     echo "Port $PORT is already in use by:" >&2
     lsof -nP -iTCP:"$PORT" -sTCP:LISTEN | sed 's/^/    /' >&2
-    fail "Stop that process first (if it is an old ChargeMatch Lite: kill <PID>), then run ./run.sh again."
+    fail "Stop that process first (if it is an old copy of this app: kill <PID>), then run ./run.sh again."
 fi
 
 # ---- 2. run the server in the foreground --------------------------------
 # app.py checks .env + the MySQL login, binds 127.0.0.1:$PORT, prints
-# "ChargeMatch Lite running at ... — press Ctrl+C to stop" and blocks.
+# "ChargeMatch running at ... — press Ctrl+C to stop" and blocks.
 "$PY" app.py
 rc=$?
 
 # ---- 3. say clearly why it stopped --------------------------------------
 case $rc in
     0|130) ;;                                                   # Ctrl+C: normal stop
-    *) echo "ChargeMatch Lite exited unexpectedly (exit code $rc). See the messages above." >&2 ;;
+    *) echo "ChargeMatch exited unexpectedly (exit code $rc). See the messages above." >&2 ;;
 esac
 exit $rc

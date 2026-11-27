@@ -94,7 +94,8 @@ CREATE TABLE charger (
     power_kw       DECIMAL(5,1) NOT NULL,
     parking_size   ENUM('2W','3W','4W') NOT NULL DEFAULT '4W' COMMENT 'Largest vehicle the parking bay fits',
     price_per_kwh  DECIMAL(5,2) NOT NULL COMMENT 'Rupees per kWh',
-    status         ENUM('available','occupied','faulty','offline') NOT NULL DEFAULT 'available',
+    status         ENUM('available','occupied','out_of_service') NOT NULL DEFAULT 'available'
+                   COMMENT 'occupied = a car is charging (trg_booking_au); out_of_service = taken out by the host',
     approval       ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
     reviewed_by    INT          NULL COMMENT 'Admin who approved/rejected',
     review_note    VARCHAR(200) NULL,
@@ -290,7 +291,7 @@ FOR EACH ROW
 BEGIN
     DECLARE v_owner    INT;
     DECLARE v_approval VARCHAR(10);
-    DECLARE v_cstatus  VARCHAR(10);
+    DECLARE v_cstatus  VARCHAR(20);
     DECLARE v_open     TIME;
     DECLARE v_close    TIME;
     DECLARE v_reason   VARCHAR(255);
@@ -322,9 +323,8 @@ BEGIN
     IF v_approval <> 'APPROVED' THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This charger is not approved by the admin yet.';
     END IF;
-    IF v_cstatus NOT IN ('available', 'occupied') THEN
-        SET v_msg = CONCAT('This charger is ', v_cstatus, ' right now and cannot be booked.');
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_msg;
+    IF v_cstatus = 'out_of_service' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This charger is out of service right now and cannot be booked.';
     END IF;
 
     IF NOT v_bypass AND (DATE(NEW.start_time) <> DATE(NEW.end_time)
@@ -414,7 +414,7 @@ BEGIN
          WHERE charger_id = NEW.charger_id AND status = 'available';
     ELSEIF OLD.status = 'charging' AND NEW.status <> 'charging' THEN
         UPDATE charger SET status = 'available'
-         WHERE charger_id = NEW.charger_id AND status = 'occupied';   -- never overrides faulty/offline
+         WHERE charger_id = NEW.charger_id AND status = 'occupied';   -- never overrides out_of_service
     END IF;
 END$$
 
@@ -483,7 +483,7 @@ BEGIN
     DECLARE v_end      DATETIME;
     DECLARE v_host     INT;
     DECLARE v_approval VARCHAR(10);
-    DECLARE v_cstatus  VARCHAR(10);
+    DECLARE v_cstatus  VARCHAR(20);
     DECLARE v_clash    INT DEFAULT 0;
 
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -516,8 +516,8 @@ BEGIN
     IF v_status <> 'requested' THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Only a requested booking can be accepted.';
     END IF;
-    IF v_approval <> 'APPROVED' OR v_cstatus IN ('faulty', 'offline') THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This charger is not bookable right now (not approved, faulty or offline).';
+    IF v_approval <> 'APPROVED' OR v_cstatus = 'out_of_service' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'This charger is not bookable right now (not approved or out of service).';
     END IF;
     -- late is fine (start time passed) as long as the slot has not ended yet
     IF v_end <= NOW() THEN
@@ -596,8 +596,8 @@ DELIMITER ;
 -- 5. VIEWS
 -- =====================================================================
 
--- What customers can search: approved chargers of active hosts, with plug,
--- listing and host details plus the live status word.
+-- What customers can search (list and map): approved, in-service chargers of active hosts, with plug,
+-- listing and host details plus the live status word. Out-of-service chargers are not in it.
 CREATE VIEW v_searchable_chargers AS
 SELECT c.charger_id, c.label, c.power_kw, c.parking_size, c.price_per_kwh,
        ct.connector_id, ct.code AS connector_code, ct.current_type,
@@ -606,15 +606,13 @@ SELECT c.charger_id, c.label, c.power_kw, c.parking_size, c.price_per_kwh,
        u.user_id AS host_id, u.name AS host_name,
        -- live status word (approval is already APPROVED here); 'occupied' is kept in step with sessions by
        -- trg_booking_au, so it means a car is charging right now
-       CASE c.status WHEN 'faulty'   THEN 'faulty'
-                     WHEN 'offline'  THEN 'offline'
-                     WHEN 'occupied' THEN 'in_use'
-                     ELSE 'available' END AS live_status
+       CASE c.status WHEN 'occupied' THEN 'in_use' ELSE 'available' END AS live_status
   FROM charger c
   JOIN connector_type ct ON ct.connector_id = c.connector_id
   JOIN listing l         ON l.listing_id    = c.listing_id
   JOIN users u           ON u.user_id       = l.host_id
  WHERE c.approval = 'APPROVED'
+   AND c.status  <> 'out_of_service'
    AND u.status   = 'ACTIVE';
 
 -- Money actually collected per listing. LEFT JOIN chain so listings with no

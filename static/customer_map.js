@@ -3,7 +3,7 @@
 // (30-second live-status polling, route planner, portable-charger hint, listing photos).
 (function () {
   const $ = (id) => document.getElementById(id);
-  const LABELS = { available: "Available", in_use: "In use", offline: "Offline / faulty", faulty: "Faulty" };
+  const LABELS = { available: "Available", in_use: "In use" };   // out-of-service chargers are not in search at all
   const map = L.map("map").setView(CM.center, 12);
   addBaseTiles(map);
 
@@ -64,7 +64,6 @@
   // ---------------------------------------------------------------- rendering
   function chargerRow(st, c) {
     const vehicle = $("vehicle").value;
-    const down = c.status === "faulty" || c.status === "offline";
     const spec = `${esc(c.connector)} · ${c.current_type} · <b>${c.power_kw} kW</b> · ${esc(c.bay)} bay · <b>₹${c.price}/kWh</b>`;
     const avail = `<span class="live-badge ${c.cstatus}">${LABELS[c.cstatus] || c.cstatus}</span>`;
     let detail = "";
@@ -73,9 +72,9 @@
     else detail = `<span class="good">✓ Fits your vehicle</span>`;
 
     const div = document.createElement("div");
-    div.className = "charger" + (c.compatible && !down ? "" : " incompatible");
+    div.className = "charger" + (c.compatible ? "" : " incompatible");
     div.innerHTML = `<div><b>${esc(c.label)}</b> ${avail}<br><small>${spec}</small><br>${detail}</div>`;
-    if (vehicle && c.compatible && !down) {
+    if (vehicle && c.compatible) {
       const form = $("book-form").content.firstElementChild.cloneNode(true);
       form.charger_id.value = c.charger_id;
       form.vehicle_id.value = vehicle;

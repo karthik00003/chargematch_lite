@@ -182,7 +182,7 @@ INSERT INTO listing_amenity (listing_id, amenity_id, note) VALUES
 --  Home chargers are AC only; every row passes chk_charger_setup: Type 2
 --  3.3 / 7.4 / 11 / 22 kW (11 and 22 = 3-phase), 15A socket 2.2 / 3.3 kW,
 --  Bharat AC-001 3.3 kW, LECCS 1.5 / 3.0 kW on a 2W / 3W bay; ₹5–30 per kWh.
---  2 PENDING (10, 20), 1 REJECTED (16), 1 set to faulty at the end (11)
+--  2 PENDING (10, 20), 1 REJECTED (16), 1 taken out of service at the end (11)
 INSERT INTO charger (charger_id, listing_id, label, connector_id, power_kw, parking_size, price_per_kwh, status, approval, reviewed_by, review_note) VALUES
 (1,  1,  'Bay A',        1,  7.4, '4W', 12.00, 'available', 'APPROVED', 1, 'Wiring photos verified'),
 (2,  1,  'Bay B',        2,  3.3, '4W',  9.00, 'available', 'APPROVED', 1, NULL),
@@ -303,7 +303,7 @@ UPDATE booking SET status = 'declined',  cancel_reason = 'Maintenance visit that
 -- left as 'requested': 22, 23, 24, 25, 28, 29.
 -- Accepting 22 in the app will auto-decline 29 (same charger, overlapping).
 
--- ------------------------------------------- charger 11 broke after #14 (it tripped twice)
-UPDATE charger SET status = 'faulty' WHERE charger_id = 11;
+-- ----------------------- charger 11 broke after #14 (it tripped twice): the host took it out of service
+UPDATE charger SET status = 'out_of_service' WHERE charger_id = 11;
 
 SET @cm_seed_bypass = NULL;

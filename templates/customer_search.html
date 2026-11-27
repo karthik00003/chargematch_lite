@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import live_badge %}
-{% block title %}Find chargers · ChargeMatch Lite{% endblock %}
+{% block title %}Find chargers · ChargeMatch{% endblock %}
 {% block content %}
 {% if not vehicles %}
   <div class="flash error">Add a vehicle first so we can check which chargers fit it — <a href="{{ url_for('customer_vehicles') }}">My vehicles</a>.</div>
@@ -45,7 +45,7 @@
     <p class="muted small">Tip: click anywhere on the map to search from that point instead.</p>
   </aside>
   <section>
-    <div class="live-legend" aria-label="Map colours">{% for k in ('available', 'in_use', 'offline') %}{{ live_badge(k) }}{% endfor %}
+    <div class="live-legend" aria-label="Map colours">{% for k in ('available', 'in_use') %}{{ live_badge(k) }}{% endfor %}
       <small class="muted">· faded pin = nothing there fits this vehicle</small></div>
     <div id="map" class="map"></div>
     <div id="status" class="muted"></div>

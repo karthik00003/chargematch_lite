@@ -101,7 +101,7 @@ erDiagram
         decimal power_kw
         enum parking_size "2W 3W 4W"
         decimal price_per_kwh
-        enum status "available occupied faulty offline"
+        enum status "available occupied out_of_service"
         enum approval "PENDING APPROVED REJECTED"
         int reviewed_by FK "NULL"
         varchar review_note "NULL"
@@ -209,7 +209,13 @@ Notation: **PK** primary key · **FK** foreign key (with ON DELETE action) · **
   branch, so a DC or imported plug can never be stored.
 * `parking_size` (2W / 3W / 4W) is the largest vehicle the bay fits; `fn_compat_reason` compares it with the vehicle.
   Phase isn't stored: it follows from the power (a home supply above 7.4 kW is 3-phase), so a column would only repeat it.
-* `status` is physical (available/occupied/faulty/offline). `approval` is the admin workflow (PENDING/APPROVED/REJECTED).
+* `status` is physical (available / occupied / out_of_service). `approval` is the admin workflow (PENDING/APPROVED/REJECTED).
+* **Out of service** (the host's toggle on My chargers, one Flask transaction): sets `out_of_service` and cancels the
+  charger's `requested` / `accepted` bookings with the reason "Charger taken out of service by the host". The charger
+  leaves `v_searchable_chargers` (search + map), `trg_booking_bi` refuses new bookings and `accept_booking` refuses
+  to accept. A session already charging continues; when it ends `trg_booking_au` leaves `out_of_service` alone.
+* **Delete**: `DELETE FROM charger` succeeds only for a charger with no bookings at all. Otherwise the booking FK
+  (ON DELETE RESTRICT) refuses it (MySQL error 1451) and the app says to set it Out of service instead.
 
 ### Customer side
 
@@ -292,7 +298,7 @@ vehicle. Host details live in `users`, not in `listing`.
 |---|---|---|
 | `fn_compat_reason(charger_id, vehicle_id)` | `NULL` if the vehicle can use the charger, else a sentence. Two rules: the vehicle's model accepts the charger's plug (*"Plug mismatch: your Ola S1 Pro takes IND_SOCKET but this charger has TYPE2."*), and the vehicle fits the parking bay, 2W < 3W < 4W (*"Parking bay is for 2W, your Nissan Leaf (imported) is 4W."*) | One definition of "compatible", used in **three** places: customer search (`WHERE fn_compat_reason(...) IS NULL`), the booking trigger (it signals the same sentence), and the integrity check. |
 
-The charger's one-word status (pending / rejected / faulty / offline / in use / available) is a plain `CASE` on
+The charger's one-word status (pending / rejected / out of service / in use / available) is a plain `CASE` on
 `approval` and `status`, in `v_searchable_chargers` and in Flask (`CHARGER_STATUS_SQL`). "In use" is simply
 `status = 'occupied'`, which `trg_booking_au` keeps in step with charging sessions.
 
@@ -300,9 +306,9 @@ The charger's one-word status (pending / rejected / faulty / offline / in use / 
 
 | Trigger | Fires | What it enforces | Why a trigger |
 |---|---|---|---|
-| `trg_booking_bi` | BEFORE INSERT booking | **validate + overlap**: status must be `requested`; start in the future; the vehicle belongs to the customer; the charger is APPROVED and available/occupied; the slot is inside opening hours on one day; the plug and bay fit (`fn_compat_reason`); **no overlap** with accepted/charging bookings on that charger (`start1 < end2 AND end1 > start2`) | The rules hold for *every* client (app, CLI, seed), not just the web form. `SIGNAL SQLSTATE '45000'` sends a readable message, which the app shows as-is. |
+| `trg_booking_bi` | BEFORE INSERT booking | **validate + overlap**: status must be `requested`; start in the future; the vehicle belongs to the customer; the charger is APPROVED and not `out_of_service`; the slot is inside opening hours on one day; the plug and bay fit (`fn_compat_reason`); **no overlap** with accepted/charging bookings on that charger (`start1 < end2 AND end1 > start2`) | The rules hold for *every* client (app, CLI, seed), not just the web form. `SIGNAL SQLSTATE '45000'` sends a readable message, which the app shows as-is. |
 | `trg_booking_bu` | BEFORE UPDATE booking | **status rules**: requested→accepted/declined/cancelled, accepted→charging/cancelled, charging→completed. Charging needs an open session and completed needs a finished one. Slot/vehicle/charger can't be edited after creation. **Late requests**: requested→accepted is allowed after the start time, but not once the slot's `end_time` has passed (then only decline). Fills a default `cancel_reason`. | Illegal jumps such as `completed → requested` are impossible even with a hand-written UPDATE. |
-| `trg_booking_au` | AFTER UPDATE booking | **charger occupied / available**: entering `charging` sets the charger `occupied`; leaving it sets it back to `available` (never overwrites `faulty`/`offline`) | Charger status can't drift out of sync with sessions. |
+| `trg_booking_au` | AFTER UPDATE booking | **charger occupied / available**: entering `charging` sets the charger `occupied`; leaving it sets it back to `available` (never overwrites `out_of_service`) | Charger status can't drift out of sync with sessions. |
 | `trg_session_au` | AFTER UPDATE charging_session | **bill on session end**: when `end_pct` is set, `kwh = ROUND((end−start)/100 × battery_kwh, 2)`, `rate = charger price`, `amount = ROUND(kwh × rate, 2)`; **INSERT bill**; booking → `completed`. A finished session can't be edited. | Billing happens automatically and the same way every time. Nobody types an amount. |
 | `trg_bill_bu` | BEFORE UPDATE bill | **bill read-only**: kwh/rate/amount/booking can never change; a PAID bill is locked; sets `paid_at = NOW()` when it becomes PAID | Financial integrity. Together with `chk_bill_paid`, `paid_at` exists exactly when the bill is PAID. |
 
@@ -333,7 +339,7 @@ COMMIT;
 * *Start session* (`start_session()` in `app.py`): one transaction. It reads the booking with its host, refuses if
   the logged-in host isn't that host, then locks the charger row (`SELECT … FOR UPDATE`). It checks the booking is
   accepted, start % 0–99, now is from 30 minutes before the slot until its end, and the charger isn't
-  faulty/offline/occupied. It then inserts `charging_session` (battery snapshot) and sets the booking to `charging`.
+  out of service or occupied. It then inserts `charging_session` (battery snapshot) and sets the booking to `charging`.
 * *Mark bill paid*: one `UPDATE bill … JOIN booking JOIN charger JOIN listing SET status = 'PAID' WHERE bill_id = ?
   AND host_id = ? AND status = 'PAYMENT_PENDING'`. The WHERE clause is the ownership check, and `trg_bill_bu` stamps
   `paid_at`.
@@ -342,7 +348,7 @@ COMMIT;
 
 | View | Definition (short) | Used by |
 |---|---|---|
-| `v_searchable_chargers` | charger ⋈ connector_type ⋈ listing ⋈ users, `WHERE approval = 'APPROVED' AND host is ACTIVE`, plus a `CASE` on approval/status as `live_status` | customer search map and listing page. Hides PENDING/REJECTED chargers and disabled hosts in one place. |
+| `v_searchable_chargers` | charger ⋈ connector_type ⋈ listing ⋈ users, `WHERE approval = 'APPROVED' AND status <> 'out_of_service' AND host is ACTIVE`, plus a `CASE` on status as `live_status` | customer search map and listing page. Hides PENDING/REJECTED and out-of-service chargers and disabled hosts in one place. |
 | `v_revenue_per_listing` | listing ⋈ users **LEFT JOIN** charger **LEFT JOIN** booking **LEFT JOIN** bill (`AND bl.status = 'PAID'` in the **ON** clause) | host **My chargers** page: the “Earned ₹… · kWh sold …” line on each listing (joined to the host's listings). The PAID filter is in `ON`, not `WHERE`; in WHERE it would turn the LEFT JOIN into an inner join and drop listings with ₹0. |
 
 ---

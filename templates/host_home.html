@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import charger_status %}
-{% block title %}My chargers · ChargeMatch Lite{% endblock %}
+{% block title %}My chargers · ChargeMatch{% endblock %}
 {% block content %}
 <div class="page-head"><h1><i data-lucide="house-plug"></i>My chargers</h1>
   <a class="btn" href="{{ url_for('host_listing_new') }}"><i data-lucide="circle-plus"></i>List my charger</a></div>
@@ -11,7 +11,7 @@
   <a class="stat" href="{{ url_for('host_requests', tab='upcoming') }}"><b>{{ stats.today or 0 }}</b><span>bookings today</span></a>
   <a class="stat" href="{{ url_for('host_requests', tab='charging') }}"><b>{{ stats.charging or 0 }}</b><span>charging now</span></a>
   <a class="stat{{ ' warn' if (stats.unpaid or 0) > 0 }}" href="{{ url_for('host_requests', tab='unpaid') }}"><b>{{ stats.unpaid or 0 }}</b><span>awaiting payment · ₹{{ '{:,.2f}'.format(stats.unpaid_amount) }}</span></a>
-  <div class="stat"><b>₹{{ '{:,.0f}'.format(stats.month_revenue) }}</b><span>collected this month</span></div>
+  <a class="stat" href="{{ url_for('host_payments', month=now.strftime('%Y-%m')) }}" title="Payment history"><b>₹{{ '{:,.0f}'.format(stats.month_revenue) }}</b><span>collected this month</span></a>
 </div>
 
 {% for s in listings %}
@@ -24,15 +24,13 @@
         <span><b>{{ s.chargers|selectattr('approval', 'equalto', 'APPROVED')|list|length }}</b> approved</span> ·
         <span><b>{{ s.chargers|selectattr('approval', 'equalto', 'PENDING')|list|length }}</b> pending</span> ·
         <span><b>{{ s.chargers|selectattr('approval', 'equalto', 'REJECTED')|list|length }}</b> rejected</span>
-        {% if s.visible %}<span class="pill status-badge approved">Visible to customers</span>
-        {% else %}<span class="pill status-badge pending">Not visible yet</span>{% endif %}
+        {% if not s.visible %}<span class="pill status-badge pending">Not visible yet</span>{% endif %}
       </div>
       <p class="listing-earned small"><i data-lucide="wallet"></i>Earned <b>₹{{ '{:,.2f}'.format(s.revenue) }}</b> · kWh sold
         <b>{{ '{:,.1f}'.format(s.kwh_sold) }}</b> <span class="muted">· {{ s.paid_bills }} paid session{{ 's' if s.paid_bills != 1 }}</span></p>
       {% if not s.visible %}<small class="muted">Customers see this listing once one of its chargers is approved and in service.</small>{% endif %}
       <div class="listing-extras">
         {% if s.amenities %}<span class="amenity-icons">{% for a in amenities if a.amenity_id in s.amenities %}<span class="am" title="{{ a.name }}{{ ': ' ~ s.amenities[a.amenity_id] if s.amenities[a.amenity_id] }}"><i data-lucide="{{ a.icon }}"></i></span>{% endfor %}</span>{% else %}<span class="muted small">No amenities listed</span>{% endif %}
-        {% if s.visible %}<span class="muted small">· <a href="{{ url_for('listing_details', listing_id=s.listing_id) }}">customer view</a></span>{% endif %}
       </div>
     </div>
   </div>
@@ -56,23 +54,24 @@
           <small class="approval-line">See the admin's comment below.</small>
         {%- else -%}
           {{ charger_status(c.live_status) }} <span class="approved-tag" title="Approved by the admin">✓ Approved</span>
-          <small class="approval-line">{{ 'Visible to customers.' if c.live_status in ('available', 'in_use') else 'Not visible while ' ~ c.live_status ~ '.' }}</small>
+          {% if c.status == 'out_of_service' %}<small class="approval-line">Hidden from customers; can't be booked.</small>{% endif %}
         {%- endif -%}
       </td>
       <td class="num">{{ c.upcoming }}</td>
       <td class="actions">
-        {% if c.approval == 'APPROVED' and c.status != 'occupied' %}
-        <form method="post" action="{{ url_for('host_charger_status', charger_id=c.charger_id) }}">{{ csrf_field() }}
-          {% if c.status == 'available' %}
-            <button name="status" value="faulty" class="danger small"
-              data-confirm="Mark {{ c.label }} FAULTY? It leaves search. {{ c.upcoming }} upcoming booking(s) stay — please contact those customers.">Faulty</button>
-            <button name="status" value="offline" class="small secondary"
-              data-confirm="Take {{ c.label }} OFFLINE for maintenance? It leaves search. {{ c.upcoming }} upcoming booking(s) stay.">Offline</button>
+        {% if c.approval == 'APPROVED' %}
+        <form method="post" action="{{ url_for('host_charger_status', charger_id=c.charger_id) }}" class="inline">{{ csrf_field() }}
+          {% if c.status == 'out_of_service' %}
+            <button name="service" value="in" class="small"><i data-lucide="power"></i>Put in service</button>
           {% else %}
-            <button name="status" value="available" class="small">Back in service</button>
+            <button name="service" value="out" class="small secondary"
+              data-confirm="Take {{ c.label }} out of service? It disappears from customer search and can't be booked.{% if c.upcoming %} Its {{ c.upcoming }} upcoming booking{{ 's' if c.upcoming != 1 }} will be cancelled.{% endif %}{% if c.status == 'occupied' %} The session charging now continues.{% endif %}"><i data-lucide="power-off"></i>Out of service</button>
           {% endif %}
         </form>
         {% endif %}
+        <form method="post" action="{{ url_for('host_charger_delete', charger_id=c.charger_id) }}" class="inline">{{ csrf_field() }}
+          <button class="danger small" data-confirm="Delete charger {{ c.label }}? This can't be undone."><i data-lucide="trash-2"></i>Delete</button>
+        </form>
       </td>
     </tr>
     {% if rejected %}

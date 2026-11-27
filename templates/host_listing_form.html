@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Edit {{ s.name }} · ChargeMatch Lite{% endblock %}
+{% block title %}Edit {{ s.name }} · ChargeMatch{% endblock %}
 {% block content %}
 <p class="crumbs"><a href="{{ url_for('host_dashboard', _anchor='st-' ~ s.listing_id) }}"><i data-lucide="arrow-left"></i>My chargers</a></p>
 <div class="page-head"><h1><i data-lucide="pencil"></i>Edit listing</h1><span class="muted">{{ s.name }}</span></div>

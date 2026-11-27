@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{# Public landing page (logged-out visitors), after the original ChargeMatch home.html: hero, Our Services, host banner. #}
+{% block title %}ChargeMatch · Share and book home EV chargers{% endblock %}
+{% block body_class %}home{% endblock %}
+{% block content %}
+{% set find = url_for('customer_search') if user and user.role == 'CUSTOMER' else url_for('login', next='/customer') %}
+
+<section class="hero">
+  <div class="wrap hero-inner">
+    <div>
+      <span class="eyebrow"><i data-lucide="sparkles"></i>Peer-to-peer home charger sharing</span>
+      <h1>Charge smarter at the <span class="hl">right&nbsp;plug</span>, every time.</h1>
+      <p class="lead">Book an EV owner's home charger nearby while they're not using it — only chargers that actually fit
+        your EV. The host enters the battery % at the start and end, the bill is calculated automatically, and you pay
+        the host directly.</p>
+      <div class="hero-cta">
+        <a class="btn lg" href="{{ find }}"><i data-lucide="navigation"></i>Find Chargers</a>
+      </div>
+    </div>
+
+    {# Original inline SVG: floating charge orb with a glowing lightning bolt #}
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 440 400" role="img">
+        <defs>
+          <radialGradient id="g-orb" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#2a8a97"/><stop offset="60%" stop-color="#0d4a53"/><stop offset="100%" stop-color="#062b31"/>
+          </radialGradient>
+          <radialGradient id="g-halo" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#EDFF12" stop-opacity=".35"/><stop offset="100%" stop-color="#EDFF12" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="g-bolt" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#F7FF8A"/><stop offset="100%" stop-color="#EDFF12"/>
+          </linearGradient>
+        </defs>
+        <circle cx="220" cy="200" r="190" fill="url(#g-halo)"/>
+        <g class="ring">
+          <circle cx="220" cy="200" r="168" fill="none" stroke="#EDFF12" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 12"/>
+          <circle cx="388" cy="200" r="5" fill="#EDFF12"/>
+          <circle cx="52" cy="200" r="3.5" fill="#E9E8F8"/>
+        </g>
+        <g class="orb">
+          <circle cx="220" cy="200" r="122" fill="url(#g-orb)" stroke="#E9E8F8" stroke-opacity=".18" stroke-width="2"/>
+          <circle cx="220" cy="200" r="122" fill="none" stroke="#EDFF12" stroke-opacity=".6" stroke-width="2"/>
+          {# little skyline + plug inside the orb #}
+          <g fill="#E9E8F8" fill-opacity=".14">
+            <rect x="150" y="238" width="22" height="46" rx="3"/><rect x="176" y="222" width="18" height="62" rx="3"/>
+            <rect x="248" y="230" width="20" height="54" rx="3"/><rect x="272" y="246" width="24" height="38" rx="3"/>
+          </g>
+          <path class="bolt" d="M236 96 160 214h52l-18 92 80-128h-54z" fill="url(#g-bolt)"/>
+        </g>
+        {# charging cable + plug #}
+        <path d="M330 300c40 10 60 40 60 70" fill="none" stroke="#E9E8F8" stroke-opacity=".5" stroke-width="5" stroke-linecap="round"/>
+        <rect x="312" y="282" width="34" height="26" rx="7" fill="#E9E8F8"/>
+        <rect x="318" y="274" width="6" height="10" rx="2" fill="#E9E8F8"/><rect x="334" y="274" width="6" height="10" rx="2" fill="#E9E8F8"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="section-head">
+    <h2>Our Services</h2>
+    <span class="muted small">Every rule below is enforced inside the database by triggers, procedures and constraints.</span>
+  </div>
+  <p class="services-intro">ChargeMatch connects EV drivers with people who have a charger at home. Hosts list their
+    charger with a price and opening hours; an admin approves each one. Drivers find a charger that fits their vehicle,
+    send a booking request, and pay the host for the energy actually used.</p>
+  <div class="services services-3">
+    <a class="service" href="{{ find }}">
+      <span class="ico"><i data-lucide="map-pinned"></i></span>
+      <h3>Find Chargers</h3>
+      <p>Search approved home chargers near you on the map, with opening hours and amenities.</p>
+    </a>
+    <div class="service">
+      <span class="ico"><i data-lucide="cable"></i></span>
+      <h3>Smart Compatibility Check</h3>
+      <p>Only chargers whose plug fits your vehicle and whose parking bay fits its size are shown.</p>
+    </div>
+    <div class="service">
+      <span class="ico"><i data-lucide="receipt-indian-rupee"></i></span>
+      <h3>Fair Billing</h3>
+      <p>The host records the battery % at start and end; the database calculates kWh × price and the bill can't be changed.</p>
+    </div>
+  </div>
+
+  <div class="cta-band">
+    <div>
+      <h2>Have a charger at home?</h2>
+      <p>Share it when you are not using it: set your price (₹5–30 per kWh) and earn from idle hours.</p>
+    </div>
+    <a class="btn lg" href="{{ url_for('register') }}"><i data-lucide="user-plus"></i>Become a host</a>
+  </div>
+</section>
+{% endblock %}

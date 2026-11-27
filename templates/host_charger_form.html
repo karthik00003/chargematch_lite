@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import approval_badge %}
-{% block title %}Edit {{ c.label }} · ChargeMatch Lite{% endblock %}
+{% block title %}Edit {{ c.label }} · ChargeMatch{% endblock %}
 {% block content %}
 <p class="crumbs"><a href="{{ url_for('host_dashboard', _anchor='st-' ~ listing.listing_id) }}"><i data-lucide="arrow-left"></i>My chargers</a></p>
 <div class="page-head"><h1><i data-lucide="pencil"></i>Edit charger {{ c.label }}</h1></div>

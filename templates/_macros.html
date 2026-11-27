@@ -7,7 +7,7 @@
 {%- endmacro %}
 
 {% macro live_badge(live) -%}
-  {%- set labels = {'available': 'Available', 'in_use': 'In use', 'offline': 'Offline / faulty'} -%}
+  {%- set labels = {'available': 'Available', 'in_use': 'In use', 'offline': 'Out of service'} -%}
   <span class="live-badge {{ live }}">{{ labels[live] }}</span>
 {%- endmacro %}
 

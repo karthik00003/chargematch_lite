@@ -3,7 +3,7 @@
    page. Nothing is stored until "Submit for approval": then Flask saves the listing, its amenities and its chargers in
    ONE transaction (listing, listing_amenity, charger). Lite has no drafts and no photos, so those parts are left out. #}
 {% from "_macros.html" import field_err %}
-{% block title %}List my charger · ChargeMatch Lite{% endblock %}
+{% block title %}List my charger · ChargeMatch{% endblock %}
 {% macro nav_buttons(step, last=false) %}
   <div class="wizard-nav">
     {% if step > 1 %}<button type="button" class="secondary" data-go="{{ step - 1 }}"><i data-lucide="arrow-left"></i>Back</button>{% endif %}

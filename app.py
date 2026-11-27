@@ -75,14 +75,13 @@ AMENITY_ICONS = {"Covered parking": "umbrella", "Restroom": "toilet", "Wi-Fi": "
 # sessions by trg_booking_au, so it means "in use". The same CASE is in v_searchable_chargers.
 CHARGER_STATUS_SQL = """CASE WHEN c.approval = 'PENDING'  THEN 'pending'
                              WHEN c.approval = 'REJECTED' THEN 'rejected'
-                             WHEN c.status = 'faulty'     THEN 'faulty'
-                             WHEN c.status = 'offline'    THEN 'offline'
+                             WHEN c.status = 'out_of_service' THEN 'out_of_service'
                              WHEN c.status = 'occupied'   THEN 'in_use'
                              ELSE 'available' END"""
 
 # status word -> the original's live-badge class + label
 LIVE = {"available": ("available", "Available"), "in_use": ("in_use", "In use"),
-        "faulty": ("faulty", "Faulty"), "offline": ("offline", "Offline"),
+        "out_of_service": ("offline", "Out of service"),
         "pending": ("awaiting_approval", "Awaiting approval"), "rejected": ("rejected", "Rejected")}
 
 OPEN_TIMES = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 15, 30, 45)]
@@ -255,7 +254,8 @@ def safe_back(default):
 @app.route("/")
 def index():
     if not g.user:
-        return redirect(url_for("login"))
+        return render_template("home.html")          # public landing page
+
     return redirect(url_for({"ADMIN": "admin_dashboard", "HOST": "host_dashboard",
                              "CUSTOMER": "customer_search"}[g.user["role"]]))
 
@@ -433,8 +433,7 @@ def listing_details(listing_id):
                       WHERE l.listing_id = %s""", (listing_id,), one=True)
     if not st:
         abort(404)
-    public = bool(db.query("SELECT 1 FROM v_searchable_chargers WHERE listing_id = %s AND live_status IN ('available', 'in_use')",
-                           (listing_id,), one=True))
+    public = bool(db.query("SELECT 1 FROM v_searchable_chargers WHERE listing_id = %s LIMIT 1", (listing_id,), one=True))
     role = g.user["role"]
     if role == "CUSTOMER" and not public or role == "HOST" and st["host_id"] != g.user["user_id"] and not public:
         abort(404)
@@ -447,7 +446,7 @@ def listing_details(listing_id):
         SELECT c.*, ct.code AS connector, ct.current_type, {CHARGER_STATUS_SQL} AS live_status,
                {'fn_compat_reason(c.charger_id, %s)' if vid else 'NULL'} AS reason
           FROM charger c JOIN connector_type ct ON ct.connector_id = c.connector_id
-         WHERE c.listing_id = %s {'' if show_all else "AND c.approval = 'APPROVED'"}
+         WHERE c.listing_id = %s {'' if show_all else "AND c.approval = 'APPROVED' AND c.status <> 'out_of_service'"}
          ORDER BY c.label""", ((vid, listing_id) if vid else (listing_id,)))
     return render_template("listing_details.html", st=st, public=public, chargers=chargers,
                            amenities=listing_amenities([listing_id])[listing_id], vehicles=vehicles,
@@ -619,7 +618,7 @@ def host_dashboard():
           JOIN listing l ON l.listing_id = c.listing_id
           LEFT JOIN bill bl ON bl.booking_id = b.booking_id
          WHERE l.host_id = %s""", (uid,), one=True)
-    return render_template("host_home.html", listings=listings, stats=stats, amenities=amenity_rows(),
+    return render_template("host_home.html", listings=listings, stats=stats, amenities=amenity_rows(), now=datetime.now(),
                            rules=charger_rules())
 
 
@@ -1020,19 +1019,97 @@ def host_charger_edit(charger_id):
                            labels=listing_labels(c["listing_id"], charger_id))
 
 
+OUT_OF_SERVICE_REASON = "Charger taken out of service by the host"
+
+
 @app.route("/host/chargers/<int:charger_id>/status", methods=["POST"])
 @role_required("HOST")
 def host_charger_status(charger_id):
+    """In service / Out of service, in ONE transaction. Out of service: the charger leaves search (v_searchable_chargers),
+    trg_booking_bi refuses new bookings, and its requested / accepted bookings are cancelled (the customer sees the
+    reason). A session already charging goes on; when it ends, trg_booking_au leaves out_of_service alone."""
     c = own_charger(charger_id)
-    new = request.form.get("status")
-    if new not in ("available", "faulty", "offline"):
+    to_out = request.form.get("service") == "out"
+    if request.form.get("service") not in ("in", "out"):
         abort(400)
-    if c["status"] == "occupied":
-        flash("A vehicle is charging there now — finish the session first.", "error")
+    conn = db.get_conn()
+    conn.begin()
+    try:
+        db.query("SELECT status FROM charger WHERE charger_id = %s FOR UPDATE", (charger_id,), one=True)
+        charging = db.query("SELECT 1 FROM booking WHERE charger_id = %s AND status = 'charging' LIMIT 1",
+                            (charger_id,), one=True)
+        if to_out:
+            db.execute("UPDATE charger SET status = 'out_of_service' WHERE charger_id = %s", (charger_id,))
+            n, _ = db.execute("""UPDATE booking SET status = 'cancelled', cancel_reason = %s
+                                  WHERE charger_id = %s AND status IN ('requested', 'accepted')""",
+                              (OUT_OF_SERVICE_REASON, charger_id))
+        else:                                     # back in service ('occupied' if a car is still charging there)
+            db.execute("UPDATE charger SET status = %s WHERE charger_id = %s",
+                       ("occupied" if charging else "available", charger_id))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    if to_out:
+        msg = f"{c['label']} is out of service and hidden from customers."
+        if n:
+            msg += f" {n} upcoming booking{'s were' if n != 1 else ' was'} cancelled (the customer sees why)."
+        if charging:
+            msg += " The session charging there now continues."
+        flash(msg, "ok")
     else:
-        db.execute("UPDATE charger SET status = %s WHERE charger_id = %s", (new, charger_id))
-        flash(f"{c['label']} is now {new}.", "ok")
+        flash(f"{c['label']} is back in service.", "ok")
+    return redirect(url_for("host_dashboard", _anchor=f"charger-{charger_id}"))
+
+
+@app.route("/host/chargers/<int:charger_id>/delete", methods=["POST"])
+@role_required("HOST")
+def host_charger_delete(charger_id):
+    """Only a charger with no bookings at all can go: the booking FK (ON DELETE RESTRICT) refuses the rest."""
+    c = own_charger(charger_id)
+    try:
+        db.execute("DELETE FROM charger WHERE charger_id = %s", (charger_id,))
+    except pymysql.err.IntegrityError as e:
+        if e.args[0] != 1451:                     # 1451 = row is referenced by a foreign key
+            raise
+        flash("This charger has booking history, so it can't be deleted — set it Out of service instead.", "error")
+        return redirect(url_for("host_dashboard", _anchor=f"charger-{charger_id}"))
+    flash(f"Charger {c['label']} deleted.", "ok")
     return redirect(url_for("host_dashboard", _anchor=f"st-{c['listing_id']}"))
+
+
+@app.route("/host/payments")
+@role_required("HOST")
+def host_payments():
+    """Every PAID bill this host has received, newest first, with a month filter and the total."""
+    uid = g.user["user_id"]
+    months = [r["ym"] for r in db.query("""
+        SELECT DISTINCT DATE_FORMAT(bl.paid_at, '%%Y-%%m') AS ym FROM bill bl
+          JOIN booking b ON b.booking_id = bl.booking_id JOIN charger c ON c.charger_id = b.charger_id
+          JOIN listing l ON l.listing_id = c.listing_id
+         WHERE l.host_id = %s AND bl.status = 'PAID' ORDER BY ym DESC""", (uid,))]
+    this_month = datetime.now().strftime("%Y-%m")
+    if this_month not in months:                  # "collected this month" links here even before the first payment
+        months.insert(0, this_month)
+    month = request.args.get("month", "")
+    if month not in months:                       # "" = all months; anything else unknown is ignored
+        month = ""
+    rows = db.query("""
+        SELECT bl.paid_at, bl.kwh, bl.rate, bl.amount, l.name AS listing_name, c.label AS charger_label,
+               u.name AS customer_name, b.start_time, b.end_time
+          FROM bill bl
+          JOIN booking b ON b.booking_id = bl.booking_id
+          JOIN charger c ON c.charger_id = b.charger_id
+          JOIN listing l ON l.listing_id = c.listing_id
+          JOIN users u   ON u.user_id    = b.customer_id
+         WHERE l.host_id = %s AND bl.status = 'PAID'
+           AND (%s = '' OR DATE_FORMAT(bl.paid_at, '%%Y-%%m') = %s)
+         ORDER BY bl.paid_at DESC""", (uid, month, month))
+    total = sum(r["amount"] for r in rows)
+    kwh = sum(r["kwh"] for r in rows)
+    month_names = {m: datetime.strptime(m, "%Y-%m").strftime("%B %Y") for m in months}
+    return render_template("host_payments.html", rows=rows, total=total, kwh=kwh, months=months,
+                           month_names=month_names, month=month)
 
 
 HOST_TABS = {"requests": "Requests", "upcoming": "Upcoming", "charging": "Charging now",
@@ -1154,8 +1231,8 @@ def start_session(host_id, booking_id, start_pct):
                            f"({b['start_time']:%d %b %H:%M}).")
             elif now >= b["end_time"]:
                 problem = "This slot has already ended; the session cannot start."
-            elif charger["status"] in ("faulty", "offline"):
-                problem = "This charger is marked faulty/offline. Fix its status first."
+            elif charger["status"] == "out_of_service":
+                problem = "This charger is out of service. Put it back in service first."
             elif charger["status"] == "occupied":
                 problem = "Another vehicle is already charging on this charger."
             else:
@@ -1334,11 +1411,11 @@ if __name__ == "__main__":
     except OSError as e:
         print(f"\n  Could not listen on {host}:{config.APP_PORT}: {e}\n")
         sys.exit(1)
-    print(f"ChargeMatch Lite running at http://{host}:{config.APP_PORT} — press Ctrl+C to stop", flush=True)
+    print(f"ChargeMatch running at http://{host}:{config.APP_PORT} — press Ctrl+C to stop", flush=True)
     try:
         server.run()                    # blocks here, in the foreground, until Ctrl+C
     except KeyboardInterrupt:
         pass
     finally:
         server.close()
-    print("\nChargeMatch Lite stopped.", flush=True)
+    print("\nChargeMatch stopped.", flush=True)

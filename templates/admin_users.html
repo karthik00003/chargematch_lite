@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {# Read-only lists (search only): the admin approves chargers but does not manage accounts. #}
-{% block title %}{{ 'Hosts' if role == 'HOST' else 'Customers' }} · Admin · ChargeMatch Lite{% endblock %}
+{% block title %}{{ 'Hosts' if role == 'HOST' else 'Customers' }} · Admin · ChargeMatch{% endblock %}
 {% block content %}
 <div class="page-head"><h1><i data-lucide="{{ 'users' if role == 'HOST' else 'user-round' }}"></i>{{ 'Hosts' if role == 'HOST' else 'Customers' }} <span class="muted small">({{ rows|length }})</span></h1></div>
 <div class="card">
