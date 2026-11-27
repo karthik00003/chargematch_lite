@@ -1,0 +1,1068 @@
+{
+ "schema": "chargematch_lite",
+ "tables": {
+  "amenity": {
+   "columns": [
+    {
+     "name": "amenity_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": true
+    },
+    {
+     "name": "name",
+     "data_type": "varchar",
+     "column_type": "varchar(50)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "icon",
+     "data_type": "varchar",
+     "column_type": "varchar(10)",
+     "nullable": false,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "amenity_id"
+   ],
+   "unique_keys": {
+    "uq_amenity_name": [
+     "name"
+    ]
+   }
+  },
+  "bill": {
+   "columns": [
+    {
+     "name": "bill_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": true
+    },
+    {
+     "name": "booking_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "kwh",
+     "data_type": "decimal",
+     "column_type": "decimal(7,2)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "rate",
+     "data_type": "decimal",
+     "column_type": "decimal(5,2)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "amount",
+     "data_type": "decimal",
+     "column_type": "decimal(9,2)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "status",
+     "data_type": "enum",
+     "column_type": "enum('PAYMENT_PENDING','PAID')",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "generated_at",
+     "data_type": "datetime",
+     "column_type": "datetime",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "paid_at",
+     "data_type": "datetime",
+     "column_type": "datetime",
+     "nullable": true,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "bill_id"
+   ],
+   "unique_keys": {
+    "uq_bill_booking": [
+     "booking_id"
+    ]
+   }
+  },
+  "booking": {
+   "columns": [
+    {
+     "name": "booking_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": true
+    },
+    {
+     "name": "customer_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "vehicle_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "charger_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "start_time",
+     "data_type": "datetime",
+     "column_type": "datetime",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "end_time",
+     "data_type": "datetime",
+     "column_type": "datetime",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "status",
+     "data_type": "enum",
+     "column_type": "enum('requested','accepted','declined','charging','completed','cancelled')",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "cancel_reason",
+     "data_type": "varchar",
+     "column_type": "varchar(200)",
+     "nullable": true,
+     "auto_increment": false
+    },
+    {
+     "name": "created_at",
+     "data_type": "datetime",
+     "column_type": "datetime",
+     "nullable": false,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "booking_id"
+   ],
+   "unique_keys": {}
+  },
+  "charger": {
+   "columns": [
+    {
+     "name": "charger_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": true
+    },
+    {
+     "name": "listing_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "label",
+     "data_type": "varchar",
+     "column_type": "varchar(40)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "connector_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "power_kw",
+     "data_type": "decimal",
+     "column_type": "decimal(5,1)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "parking_size",
+     "data_type": "enum",
+     "column_type": "enum('2W','3W','4W')",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "price_per_kwh",
+     "data_type": "decimal",
+     "column_type": "decimal(5,2)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "status",
+     "data_type": "enum",
+     "column_type": "enum('available','occupied','out_of_service')",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "approval",
+     "data_type": "enum",
+     "column_type": "enum('PENDING','APPROVED','REJECTED')",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "reviewed_by",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": true,
+     "auto_increment": false
+    },
+    {
+     "name": "review_note",
+     "data_type": "varchar",
+     "column_type": "varchar(200)",
+     "nullable": true,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "charger_id"
+   ],
+   "unique_keys": {
+    "uq_charger_label": [
+     "listing_id",
+     "label"
+    ]
+   }
+  },
+  "charging_session": {
+   "columns": [
+    {
+     "name": "booking_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "start_pct",
+     "data_type": "tinyint",
+     "column_type": "tinyint unsigned",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "end_pct",
+     "data_type": "tinyint",
+     "column_type": "tinyint unsigned",
+     "nullable": true,
+     "auto_increment": false
+    },
+    {
+     "name": "battery_kwh",
+     "data_type": "decimal",
+     "column_type": "decimal(5,2)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "started_at",
+     "data_type": "datetime",
+     "column_type": "datetime",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "ended_at",
+     "data_type": "datetime",
+     "column_type": "datetime",
+     "nullable": true,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "booking_id"
+   ],
+   "unique_keys": {}
+  },
+  "connector_type": {
+   "columns": [
+    {
+     "name": "connector_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": true
+    },
+    {
+     "name": "code",
+     "data_type": "varchar",
+     "column_type": "varchar(20)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "description",
+     "data_type": "varchar",
+     "column_type": "varchar(150)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "current_type",
+     "data_type": "enum",
+     "column_type": "enum('AC','DC')",
+     "nullable": false,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "connector_id"
+   ],
+   "unique_keys": {
+    "uq_connector_code": [
+     "code"
+    ]
+   }
+  },
+  "listing": {
+   "columns": [
+    {
+     "name": "listing_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": true
+    },
+    {
+     "name": "host_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "name",
+     "data_type": "varchar",
+     "column_type": "varchar(100)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "address",
+     "data_type": "varchar",
+     "column_type": "varchar(200)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "city",
+     "data_type": "varchar",
+     "column_type": "varchar(50)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "latitude",
+     "data_type": "decimal",
+     "column_type": "decimal(9,6)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "longitude",
+     "data_type": "decimal",
+     "column_type": "decimal(9,6)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "open_time",
+     "data_type": "time",
+     "column_type": "time",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "close_time",
+     "data_type": "time",
+     "column_type": "time",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "created_at",
+     "data_type": "datetime",
+     "column_type": "datetime",
+     "nullable": false,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "listing_id"
+   ],
+   "unique_keys": {}
+  },
+  "listing_amenity": {
+   "columns": [
+    {
+     "name": "listing_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "amenity_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "note",
+     "data_type": "varchar",
+     "column_type": "varchar(100)",
+     "nullable": true,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "listing_id",
+    "amenity_id"
+   ],
+   "unique_keys": {}
+  },
+  "model_connector": {
+   "columns": [
+    {
+     "name": "model_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "connector_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "model_id",
+    "connector_id"
+   ],
+   "unique_keys": {}
+  },
+  "users": {
+   "columns": [
+    {
+     "name": "user_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": true
+    },
+    {
+     "name": "name",
+     "data_type": "varchar",
+     "column_type": "varchar(80)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "email",
+     "data_type": "varchar",
+     "column_type": "varchar(120)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "password_hash",
+     "data_type": "varchar",
+     "column_type": "varchar(255)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "role",
+     "data_type": "enum",
+     "column_type": "enum('ADMIN','HOST','CUSTOMER')",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "status",
+     "data_type": "enum",
+     "column_type": "enum('ACTIVE','DISABLED')",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "created_at",
+     "data_type": "datetime",
+     "column_type": "datetime",
+     "nullable": false,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "user_id"
+   ],
+   "unique_keys": {
+    "uq_users_email": [
+     "email"
+    ]
+   }
+  },
+  "vehicle": {
+   "columns": [
+    {
+     "name": "vehicle_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": true
+    },
+    {
+     "name": "user_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "model_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "reg_no",
+     "data_type": "varchar",
+     "column_type": "varchar(12)",
+     "nullable": false,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "vehicle_id"
+   ],
+   "unique_keys": {
+    "uq_vehicle_reg": [
+     "reg_no"
+    ]
+   }
+  },
+  "vehicle_model": {
+   "columns": [
+    {
+     "name": "model_id",
+     "data_type": "int",
+     "column_type": "int",
+     "nullable": false,
+     "auto_increment": true
+    },
+    {
+     "name": "make",
+     "data_type": "varchar",
+     "column_type": "varchar(40)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "model_name",
+     "data_type": "varchar",
+     "column_type": "varchar(60)",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "vehicle_class",
+     "data_type": "enum",
+     "column_type": "enum('2W','3W','4W')",
+     "nullable": false,
+     "auto_increment": false
+    },
+    {
+     "name": "battery_kwh",
+     "data_type": "decimal",
+     "column_type": "decimal(5,2)",
+     "nullable": false,
+     "auto_increment": false
+    }
+   ],
+   "primary_key": [
+    "model_id"
+   ],
+   "unique_keys": {
+    "uq_make_model": [
+     "make",
+     "model_name"
+    ]
+   }
+  }
+ },
+ "foreign_keys": [
+  {
+   "name": "fk_bill_booking",
+   "child": "bill",
+   "parent": "booking",
+   "columns": [
+    "booking_id"
+   ],
+   "parent_columns": [
+    "booking_id"
+   ],
+   "on_delete": "RESTRICT",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": true,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o|",
+   "mermaid": "||--o|",
+   "ratio": "1:0..1",
+   "max_children": 1,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 1 (must be \u2264 1)",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_booking_charger",
+   "child": "booking",
+   "parent": "charger",
+   "columns": [
+    "charger_id"
+   ],
+   "parent_columns": [
+    "charger_id"
+   ],
+   "on_delete": "RESTRICT",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 4,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 4",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_booking_customer",
+   "child": "booking",
+   "parent": "users",
+   "columns": [
+    "customer_id"
+   ],
+   "parent_columns": [
+    "user_id"
+   ],
+   "on_delete": "RESTRICT",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 7,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 7",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_booking_vehicle",
+   "child": "booking",
+   "parent": "vehicle",
+   "columns": [
+    "vehicle_id"
+   ],
+   "parent_columns": [
+    "vehicle_id"
+   ],
+   "on_delete": "RESTRICT",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 6,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 6",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_charger_conn",
+   "child": "charger",
+   "parent": "connector_type",
+   "columns": [
+    "connector_id"
+   ],
+   "parent_columns": [
+    "connector_id"
+   ],
+   "on_delete": "RESTRICT",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 14,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 14",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_charger_listing",
+   "child": "charger",
+   "parent": "listing",
+   "columns": [
+    "listing_id"
+   ],
+   "parent_columns": [
+    "listing_id"
+   ],
+   "on_delete": "CASCADE",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 3,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 3",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_charger_reviewer",
+   "child": "charger",
+   "parent": "users",
+   "columns": [
+    "reviewed_by"
+   ],
+   "parent_columns": [
+    "user_id"
+   ],
+   "on_delete": "SET NULL",
+   "on_update": "NO ACTION",
+   "nullable": true,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "|o",
+   "right": "o{",
+   "mermaid": "|o--o{",
+   "ratio": "0..1:N",
+   "max_children": 24,
+   "null_rows": 2,
+   "checks": [
+    "max children per parent = 24",
+    "child rows with NULL FK = 2 (allowed)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_session_booking",
+   "child": "charging_session",
+   "parent": "booking",
+   "columns": [
+    "booking_id"
+   ],
+   "parent_columns": [
+    "booking_id"
+   ],
+   "on_delete": "CASCADE",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": true,
+   "is_child_pk": true,
+   "left": "||",
+   "right": "o|",
+   "mermaid": "||--o|",
+   "ratio": "1:0..1",
+   "max_children": 1,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 1 (must be \u2264 1)",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_listing_host",
+   "child": "listing",
+   "parent": "users",
+   "columns": [
+    "host_id"
+   ],
+   "parent_columns": [
+    "user_id"
+   ],
+   "on_delete": "RESTRICT",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 3,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 3",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_la_amenity",
+   "child": "listing_amenity",
+   "parent": "amenity",
+   "columns": [
+    "amenity_id"
+   ],
+   "parent_columns": [
+    "amenity_id"
+   ],
+   "on_delete": "CASCADE",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 7,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 7",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_la_listing",
+   "child": "listing_amenity",
+   "parent": "listing",
+   "columns": [
+    "listing_id"
+   ],
+   "parent_columns": [
+    "listing_id"
+   ],
+   "on_delete": "CASCADE",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 5,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 5",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_mc_conn",
+   "child": "model_connector",
+   "parent": "connector_type",
+   "columns": [
+    "connector_id"
+   ],
+   "parent_columns": [
+    "connector_id"
+   ],
+   "on_delete": "CASCADE",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 40,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 40",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_mc_model",
+   "child": "model_connector",
+   "parent": "vehicle_model",
+   "columns": [
+    "model_id"
+   ],
+   "parent_columns": [
+    "model_id"
+   ],
+   "on_delete": "CASCADE",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 3,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 3",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_vehicle_model",
+   "child": "vehicle",
+   "parent": "vehicle_model",
+   "columns": [
+    "model_id"
+   ],
+   "parent_columns": [
+    "model_id"
+   ],
+   "on_delete": "RESTRICT",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 2,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 2",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  },
+  {
+   "name": "fk_vehicle_user",
+   "child": "vehicle",
+   "parent": "users",
+   "columns": [
+    "user_id"
+   ],
+   "parent_columns": [
+    "user_id"
+   ],
+   "on_delete": "RESTRICT",
+   "on_update": "NO ACTION",
+   "nullable": false,
+   "unique": false,
+   "is_child_pk": false,
+   "left": "||",
+   "right": "o{",
+   "mermaid": "||--o{",
+   "ratio": "1:N",
+   "max_children": 2,
+   "null_rows": 0,
+   "checks": [
+    "max children per parent = 2",
+    "child rows with NULL FK = 0 (must be 0)"
+   ],
+   "verified": true
+  }
+ ],
+ "junctions": [
+  {
+   "table": "listing_amenity",
+   "left": "listing",
+   "right": "amenity",
+   "fks": [
+    "fk_la_listing",
+    "fk_la_amenity"
+   ],
+   "attributes": [
+    "note"
+   ]
+  },
+  {
+   "table": "model_connector",
+   "left": "vehicle_model",
+   "right": "connector_type",
+   "fks": [
+    "fk_mc_model",
+    "fk_mc_conn"
+   ],
+   "attributes": []
+  }
+ ]
+}

@@ -1,0 +1,113 @@
+erDiagram
+    amenity ||--o{ listing_amenity : "amenity_id (1:N)"
+    booking ||--o| bill : "booking_id (1:0..1)"
+    booking ||--o| charging_session : "booking_id (1:0..1)"
+    charger ||--o{ booking : "charger_id (1:N)"
+    connector_type ||--o{ charger : "connector_id (1:N)"
+    connector_type ||--o{ model_connector : "connector_id (1:N)"
+    listing ||--o{ charger : "listing_id (1:N)"
+    listing ||--o{ listing_amenity : "listing_id (1:N)"
+    users ||--o{ booking : "customer_id (1:N)"
+    users |o--o{ charger : "reviewed_by (0..1:N)"
+    users ||--o{ listing : "host_id (1:N)"
+    users ||--o{ vehicle : "user_id (1:N)"
+    vehicle ||--o{ booking : "vehicle_id (1:N)"
+    vehicle_model ||--o{ model_connector : "model_id (1:N)"
+    vehicle_model ||--o{ vehicle : "model_id (1:N)"
+
+    amenity {
+        int amenity_id PK
+        varchar(50) name UK
+        varchar(10) icon
+    }
+    bill {
+        int bill_id PK
+        int booking_id FK, UK
+        decimal(7-2) kwh
+        decimal(5-2) rate
+        decimal(9-2) amount
+        enum status "PAYMENT_PENDING / PAID"
+        datetime generated_at
+        datetime paid_at "NULL"
+    }
+    booking {
+        int booking_id PK
+        int customer_id FK
+        int vehicle_id FK
+        int charger_id FK
+        datetime start_time
+        datetime end_time
+        enum status "requested / accepted / declined / charging / completed / cancelled"
+        varchar(200) cancel_reason "NULL"
+        datetime created_at
+    }
+    charger {
+        int charger_id PK
+        int listing_id FK, UK "UK together: listing_id + label"
+        varchar(40) label UK "UK together: listing_id + label"
+        int connector_id FK
+        decimal(5-1) power_kw
+        enum parking_size "2W / 3W / 4W"
+        decimal(5-2) price_per_kwh
+        enum status "available / occupied / out_of_service"
+        enum approval "PENDING / APPROVED / REJECTED"
+        int reviewed_by FK "NULL"
+        varchar(200) review_note "NULL"
+    }
+    charging_session {
+        int booking_id PK, FK
+        tinyint start_pct
+        tinyint end_pct "NULL"
+        decimal(5-2) battery_kwh
+        datetime started_at
+        datetime ended_at "NULL"
+    }
+    connector_type {
+        int connector_id PK
+        varchar(20) code UK
+        varchar(150) description
+        enum current_type "AC / DC"
+    }
+    listing {
+        int listing_id PK
+        int host_id FK
+        varchar(100) name
+        varchar(200) address
+        varchar(50) city
+        decimal(9-6) latitude
+        decimal(9-6) longitude
+        time open_time
+        time close_time
+        datetime created_at
+    }
+    listing_amenity {
+        int listing_id PK, FK
+        int amenity_id PK, FK
+        varchar(100) note "NULL"
+    }
+    model_connector {
+        int model_id PK, FK
+        int connector_id PK, FK
+    }
+    users {
+        int user_id PK
+        varchar(80) name
+        varchar(120) email UK
+        varchar(255) password_hash
+        enum role "ADMIN / HOST / CUSTOMER"
+        enum status "ACTIVE / DISABLED"
+        datetime created_at
+    }
+    vehicle {
+        int vehicle_id PK
+        int user_id FK
+        int model_id FK
+        varchar(12) reg_no UK
+    }
+    vehicle_model {
+        int model_id PK
+        varchar(40) make UK "UK together: make + model_name"
+        varchar(60) model_name UK "UK together: make + model_name"
+        enum vehicle_class "2W / 3W / 4W"
+        decimal(5-2) battery_kwh
+    }

@@ -173,6 +173,8 @@ app.py              Flask routes (customer / host / admin)
 db.py               PyMySQL helpers + friendly error messages
 config.py           reads .env, refuses a wrong DB name or the root user
 check_integrity.py  data integrity checks
+tools/er_extract.py ER diagram from information_schema, verified against the data -> docs/ER_DIAGRAM.md
+tools/er_chen.py    Chen-notation version (Graphviz) -> docs/er_chen.svg / .png
 templates/          Jinja pages      static/  style.css + app.js + review_map.js copied from the original ChargeMatch,
                     customer_map.js adapted from it, host.js, lite.css (2 small overrides), validate.js (every
                     form: short fixed messages such as “Minimum 3 characters”, shown only after Enter / Submit /

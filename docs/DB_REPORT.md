@@ -32,96 +32,52 @@ customers can find it. A **customer** registers *vehicles* (a model from the cat
 for chargers whose plug fits their vehicle and *book* a time slot. The host accepts or declines the request. When the car
 arrives the host starts a *charging session* with the battery %. When it leaves, the host ends the session with the new
 battery %. The database then generates the *bill* by itself: (end% − start%) / 100 × battery kWh × rate. The host marks
-the bill paid, and the customer can then *rate* the listing.
+the bill paid, and the customer sees "Payment successful".
 
 ## 2. ER diagram
 
-`||` = exactly one, `o|` = zero or one, `o{` = zero or many. PK = primary key, FK = foreign key, UK = unique.
+Generated from the **live** database (`information_schema`) by `tools/er_extract.py` and checked against the data:
+every foreign key is one line, 15 lines for 15 FKs, 12 tables, all ✓. Full details (the rules, the verification
+table, keys per table) are in **[ER_DIAGRAM.md](ER_DIAGRAM.md)**.
+
+Each line is written `PARENT <parent end>--<child end> CHILD : "fk_column (ratio)"`:
+`||` exactly one (FK NOT NULL) · `|o` zero or one (FK NULL) · `o|` zero or one (FK UNIQUE / PK of the child) ·
+`o{` zero or many. PK = primary key, FK = foreign key, UK = unique ("UK together" = a unique key over two columns).
+
+![ER diagram, crow's-foot](er_crowsfoot.svg)
 
 ```mermaid
 erDiagram
-    users ||--o{ listing          : "hosts (host_id)"
-    users ||--o{ vehicle          : "owns"
-    users ||--o{ booking          : "makes (customer_id)"
-    users |o--o{ charger          : "reviews (reviewed_by)"
-    listing ||--o{ charger        : "has"
-    listing ||--o{ listing_amenity: "offers"
-    amenity ||--o{ listing_amenity: "appears in"
-    connector_type ||--o{ charger         : "is plug of"
-    connector_type ||--o{ model_connector : "accepted by"
-    vehicle_model  ||--o{ model_connector : "accepts"
-    vehicle_model  ||--o{ vehicle         : "is model of"
-    vehicle ||--o{ booking        : "is charged in"
-    charger ||--o{ booking        : "is booked in"
-    booking ||--o| charging_session : "has"
-    booking ||--o| bill           : "is billed by"
+    amenity ||--o{ listing_amenity : "amenity_id (1:N)"
+    booking ||--o| bill : "booking_id (1:0..1)"
+    booking ||--o| charging_session : "booking_id (1:0..1)"
+    charger ||--o{ booking : "charger_id (1:N)"
+    connector_type ||--o{ charger : "connector_id (1:N)"
+    connector_type ||--o{ model_connector : "connector_id (1:N)"
+    listing ||--o{ charger : "listing_id (1:N)"
+    listing ||--o{ listing_amenity : "listing_id (1:N)"
+    users ||--o{ booking : "customer_id (1:N)"
+    users |o--o{ charger : "reviewed_by (0..1:N)"
+    users ||--o{ listing : "host_id (1:N)"
+    users ||--o{ vehicle : "user_id (1:N)"
+    vehicle ||--o{ booking : "vehicle_id (1:N)"
+    vehicle_model ||--o{ model_connector : "model_id (1:N)"
+    vehicle_model ||--o{ vehicle : "model_id (1:N)"
 
-    users {
-        int user_id PK
-        varchar name
-        varchar email UK
-        varchar password_hash
-        enum role "ADMIN HOST CUSTOMER"
-        enum status "ACTIVE DISABLED"
-        datetime created_at
-    }
-    connector_type {
-        int connector_id PK
-        varchar code UK
-        varchar description
-        enum current_type "AC DC"
-    }
     amenity {
         int amenity_id PK
-        varchar name UK
-        varchar icon
+        varchar(50) name UK
+        varchar(10) icon
     }
-    listing {
-        int listing_id PK
-        int host_id FK
-        varchar name
-        varchar address
-        varchar city
-        decimal latitude
-        decimal longitude
-        time open_time
-        time close_time
-        datetime created_at
-    }
-    listing_amenity {
-        int listing_id PK,FK
-        int amenity_id PK,FK
-        varchar note "NULL"
-    }
-    charger {
-        int charger_id PK
-        int listing_id FK "UK with label"
-        varchar label "UK with listing_id"
-        int connector_id FK
-        decimal power_kw
-        enum parking_size "2W 3W 4W"
-        decimal price_per_kwh
-        enum status "available occupied out_of_service"
-        enum approval "PENDING APPROVED REJECTED"
-        int reviewed_by FK "NULL"
-        varchar review_note "NULL"
-    }
-    vehicle_model {
-        int model_id PK
-        varchar make "UK with model_name"
-        varchar model_name
-        enum vehicle_class "2W 3W 4W"
-        decimal battery_kwh
-    }
-    model_connector {
-        int model_id PK,FK
-        int connector_id PK,FK
-    }
-    vehicle {
-        int vehicle_id PK
-        int user_id FK
-        int model_id FK
-        varchar reg_no UK
+    bill {
+        int bill_id PK
+        int booking_id FK, UK
+        decimal(7-2) kwh
+        decimal(5-2) rate
+        decimal(9-2) amount
+        enum status "PAYMENT_PENDING / PAID"
+        datetime generated_at
+        datetime paid_at "NULL"
     }
     booking {
         int booking_id PK
@@ -130,36 +86,98 @@ erDiagram
         int charger_id FK
         datetime start_time
         datetime end_time
-        enum status "requested accepted declined charging completed cancelled"
-        varchar cancel_reason "NULL"
+        enum status "requested / accepted / declined / charging / completed / cancelled"
+        varchar(200) cancel_reason "NULL"
         datetime created_at
     }
+    charger {
+        int charger_id PK
+        int listing_id FK, UK "UK together: listing_id + label"
+        varchar(40) label UK "UK together: listing_id + label"
+        int connector_id FK
+        decimal(5-1) power_kw
+        enum parking_size "2W / 3W / 4W"
+        decimal(5-2) price_per_kwh
+        enum status "available / occupied / out_of_service"
+        enum approval "PENDING / APPROVED / REJECTED"
+        int reviewed_by FK "NULL"
+        varchar(200) review_note "NULL"
+    }
     charging_session {
-        int booking_id PK,FK
+        int booking_id PK, FK
         tinyint start_pct
         tinyint end_pct "NULL"
-        decimal battery_kwh
+        decimal(5-2) battery_kwh
         datetime started_at
         datetime ended_at "NULL"
     }
-    bill {
-        int bill_id PK
-        int booking_id FK,UK
-        decimal kwh
-        decimal rate
-        decimal amount
-        enum status "PAYMENT_PENDING PAID"
-        datetime generated_at
-        datetime paid_at "NULL"
+    connector_type {
+        int connector_id PK
+        varchar(20) code UK
+        varchar(150) description
+        enum current_type "AC / DC"
+    }
+    listing {
+        int listing_id PK
+        int host_id FK
+        varchar(100) name
+        varchar(200) address
+        varchar(50) city
+        decimal(9-6) latitude
+        decimal(9-6) longitude
+        time open_time
+        time close_time
+        datetime created_at
+    }
+    listing_amenity {
+        int listing_id PK, FK
+        int amenity_id PK, FK
+        varchar(100) note "NULL"
+    }
+    model_connector {
+        int model_id PK, FK
+        int connector_id PK, FK
+    }
+    users {
+        int user_id PK
+        varchar(80) name
+        varchar(120) email UK
+        varchar(255) password_hash
+        enum role "ADMIN / HOST / CUSTOMER"
+        enum status "ACTIVE / DISABLED"
+        datetime created_at
+    }
+    vehicle {
+        int vehicle_id PK
+        int user_id FK
+        int model_id FK
+        varchar(12) reg_no UK
+    }
+    vehicle_model {
+        int model_id PK
+        varchar(40) make UK "UK together: make + model_name"
+        varchar(60) model_name UK "UK together: make + model_name"
+        enum vehicle_class "2W / 3W / 4W"
+        decimal(5-2) battery_kwh
     }
 ```
 
-**How to read the main relationships**
-* **users → listing / vehicle / booking: 1 : N.** One `users` table serves all three roles, told apart by `role`.
-* **listing ↔ amenity: M : N**, resolved by the bridge table `listing_amenity` (which also holds a `note`).
-* **vehicle_model ↔ connector_type: M : N**, resolved by `model_connector`. A Tata Nexon EV LR accepts TYPE2, CCS2 and the 15A socket.
-* **booking → charging_session, bill: 1 : 0..1.** `charging_session` uses `booking_id` as its own PK.
-  `bill` has a UNIQUE `booking_id`. This is how a 1:1 relationship is enforced.
+**Chen notation** (entities, verb diamonds, attribute ovals with the PK underlined, 1 / N / M on each line,
+double line = total participation, `charging_session` as a weak entity): [er_chen.svg](er_chen.svg) ·
+[er_chen.png](er_chen.png)
+
+![ER diagram, Chen notation](er_chen.svg)
+
+**How to read the main relationships** (ratios as verified)
+* **users → listing (host_id), vehicle (user_id), booking (customer_id): 1 : N.** One `users` table serves all three
+  roles, told apart by `role`.
+* **users → charger (reviewed_by): 0..1 : N.** The FK is NULL until an admin reviews the charger.
+* **listing → charger, charger → booking, vehicle → booking, vehicle_model → vehicle, connector_type → charger: 1 : N.**
+* **listing ↔ amenity: M : N**, resolved by the junction table `listing_amenity` (PK listing_id + amenity_id, plus a `note`).
+* **vehicle_model ↔ connector_type: M : N**, resolved by `model_connector` (PK model_id + connector_id). A Tata Nexon EV
+  LR accepts TYPE2, CCS2 and the 15A socket.
+* **booking → charging_session, bill: 1 : 0..1.** `charging_session` uses `booking_id` as its own PK (a weak entity);
+  `bill` has a UNIQUE `booking_id`. This is how "at most one" is enforced; the data check found at most 1 per booking.
 
 ---
 

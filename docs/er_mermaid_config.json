@@ -1,0 +1,21 @@
+{
+  "theme": "neutral",
+  "layout": "elk",
+  "themeVariables": {
+    "fontSize": "20px",
+    "fontFamily": "Helvetica, Arial, sans-serif"
+  },
+  "themeCSS": ".relationshipLabel, .edgeLabel, .edgeLabel text, .edgeLabel tspan { font-size: 22px !important; font-weight: 600; }",
+  "elk": {
+    "mergeEdges": false,
+    "nodePlacementStrategy": "NETWORK_SIMPLEX"
+  },
+  "er": {
+    "useMaxWidth": false,
+    "fontSize": 20,
+    "diagramPadding": 40,
+    "entityPadding": 20,
+    "minEntityWidth": 140
+  },
+  "htmlLabels": false
+}
