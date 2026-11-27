@@ -23,11 +23,11 @@ DOCS = os.path.join(ROOT, "docs")
 # The only hand-written part: a verb for each relationship, read "parent VERB child" (or "left VERB right" for M:N).
 VERBS = {
     ("listing", ("host_id",)): "lists",
-    ("charger", ("listing_id",)): "has",
+    ("charger", ("listing_id",)): "contains",
     ("charger", ("connector_id",)): "uses",                 # charger uses a connector type
     ("charger", ("reviewed_by",)): "reviews",
     ("vehicle", ("user_id",)): "owns",
-    ("vehicle", ("model_id",)): "is a",
+    ("vehicle", ("model_id",)): "is of model",               # not "is a": ISA means inheritance in EER
     ("booking", ("customer_id",)): "books",
     ("booking", ("vehicle_id",)): "for",
     ("booking", ("charger_id",)): "reserves",

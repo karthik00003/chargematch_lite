@@ -142,7 +142,7 @@ graph chen {
   "R_charger_connector_id" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="uses"];
   "connector_type" -- "R_charger_connector_id" [headlabel="1"];
   "R_charger_connector_id" -- "charger" [taillabel="N", color="#333333:invis:#333333"];
-  "R_charger_listing_id" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="has"];
+  "R_charger_listing_id" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="contains"];
   "listing" -- "R_charger_listing_id" [headlabel="1"];
   "R_charger_listing_id" -- "charger" [taillabel="N", color="#333333:invis:#333333"];
   "R_charger_reviewed_by" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="reviews"];
@@ -154,7 +154,7 @@ graph chen {
   "R_listing_host_id" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="lists"];
   "users" -- "R_listing_host_id" [headlabel="1"];
   "R_listing_host_id" -- "listing" [taillabel="N", color="#333333:invis:#333333"];
-  "R_vehicle_model_id" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="is a"];
+  "R_vehicle_model_id" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="is of model"];
   "vehicle_model" -- "R_vehicle_model_id" [headlabel="1"];
   "R_vehicle_model_id" -- "vehicle" [taillabel="N", color="#333333:invis:#333333"];
   "R_vehicle_user_id" [shape=diamond, style="filled", fillcolor="#FFF9C4", color="#6B6B00", penwidth=1.6, fontsize=17, fontname="Helvetica-Bold", margin="0.08,0.04", label="owns"];

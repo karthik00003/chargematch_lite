@@ -154,6 +154,10 @@ Built by `tools/er_chen.py` from the same verified model (`er_model.json`):
   primary key is its FK `booking_id`, so a session cannot exist or be identified without its booking.
 * Junction tables are not entities: `listing_amenity` is the M:N diamond *offers* (with its attribute `note`) and
   `model_connector` is the M:N diamond *accepts*.
+* Relationship names: users *lists* listing · listing *contains* charger · charger *uses* connector_type · users
+  *reviews* charger · users *owns* vehicle · vehicle *is of model* vehicle_model (not "is a": ISA means inheritance in
+  EER) · users *books* booking · booking *for* vehicle · booking *reserves* charger · booking *has* charging_session
+  (the identifying relationship) · booking *generates* bill.
 
 ## Many-to-many relationships
 
